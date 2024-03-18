@@ -9,11 +9,11 @@ cd deployment
 zip -r action.zip *
 
 # Move the zip file back to the original directory if needed
-mv action.zip ../
+wsk action create transcoder action.zip --docker docker.io/prajjawal05/transcoder:latest --insecure
+
+rm action.zip
 
 # Clean up the temporary directory
 cd ..
 rm action.zip
 rm -rf deployment
-
-wsk action create transcoder action.zip --docker docker.io/prajjawal05/transcoder:latest --insecure
