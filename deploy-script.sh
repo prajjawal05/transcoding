@@ -15,5 +15,4 @@ rm action.zip
 
 # Clean up the temporary directory
 cd ..
-rm action.zip
 rm -rf deployment
