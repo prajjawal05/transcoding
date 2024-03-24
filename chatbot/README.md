@@ -32,8 +32,7 @@ If you are making any changes to object store package or adding a library, you n
 
 You would have to change docker remote in build-docker.sh and deploy-script.sh.
 
-#### Transcoding action
+#### Run
 
-To run transcoding action, you would need to put a `facebook.mp4` in `input-video` bucket.
 To test the action: `python3 run-action-local.py`.
 To run the orchestrator: `python3 run-orchestrator.py`.
