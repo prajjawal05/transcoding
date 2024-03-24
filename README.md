@@ -1,46 +1,34 @@
-# transcoding
+# Openwhisk Orchestration
 
-codec - coder, decoder (software or hardware algorithm used to compress and decompress digital multimedia data). Transcoding decodes using the original algorithm, and then encodes using a different algorithm. thus changing the codec.
+There are multiple actions in this repository. Go to respective folder.
 
-## Pre-requisites
+#### Pre-requisites
 
-1. You would need to install `ffmpeg` first.
-2. Run `pip3 install -r requirements.txt`.
-3. You would need minio object store running somewhere.
-4. MongoDB is also required for storing action states.
+For orchestrator:
 
-### Kind Cluster
+1. Run `pip3 install -r requirements.txt`.
+2. You would need minio object store running somewhere.
+
+- For running minio use: `minio server miniodata`
+
+3. MongoDB is also required for storing action states.
+
+- For mongod use: `mongod --config /usr/local/etc/mongod.conf --fork`.
+
+#### Kind Cluster
 
 Kind should be running somewhere probably over docker.
 To setup cluster, run:
 `sh start-cluster.sh`.
 
-### Running services locally.
+#### Setup Action and Orchestrator
 
-1. For running minio use: `minio server miniodata`.
-2. For mongod use: `mongod --config /usr/local/etc/mongod.conf --fork`.
+Replace env constants for DB and Object store in `constants.py`.
 
-## Setup Action and Orchestrator
+#### Run
 
-1. Run `wsk property get --auth` to get authorization details.
-2. Use that when initialising `BaseOrchestrator`. See `transcodingActions.py` for more details on how to use it.
-3. Replace env constants for DB and Object store in `constants.py`.
-4. To deploy your action use: `deploy-script.sh`.
-
-## Changes to object store
-
-If you are making any changes to object store package, you need to run:
-`sh update-store.sh`.
-
-### Note:
-
-You would have to change docker remote in update-store.sh and deploy-script.sh.
-
-#### Transcoding action
-
-To run transcoding action, you would need to put a `facebook.mp4` in `input-video` bucket.
-
-And the command is: `python3 transcodingOrchestrator.py`.
+- To test the action: `python3 run-action-local.py`.
+- To run the orchestrator: `python3 run-orchestrator.py`.
 
 #### Delete cluster
 

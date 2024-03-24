@@ -7,28 +7,29 @@ from constants import MINIO_ENDPOINT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
         "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
 orch = BaseOrchestrator(auth)
-
-config = dict(
-    STORAGE_ENDPOINT=MINIO_ENDPOINT,
-    AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY
-)
+action_name = 'transcoder'
 
 CHUNKS_BUCKET_NAME = 'output-chunks'
 TRANSCODED_CHUNKS_NAME = 'transcoded-chunks'
 PROCESSED_VIDEO_BUCKET = 'processed-video'
 INPUT_VIDEO_BUCKET = 'input-video'
 
-store = store.ObjectStore(config, [
-    CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
 
+def get_store():
+    config = dict(
+        STORAGE_ENDPOINT=MINIO_ENDPOINT,
+        AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY
+    )
 
-action_name = 'transcoder'
+    return store.ObjectStore(config, [
+        CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
 
 
 async def main():
     num_chunks = 5
     transcoding_parallelisation = 2
+    store = get_store()
 
     print("** Chunking **")
     params = {

@@ -1,8 +1,8 @@
 mkdir deployment
 
 # Copy transcodingActions.py and constants.py to the temporary directory
-cp transcodingActions.py deployment/__main__.py
-cp constants.py deployment/
+cp actions.py deployment/__main__.py
+cp ../constants.py deployment/
 
 # Zip the contents of the temporary directory
 cd deployment
