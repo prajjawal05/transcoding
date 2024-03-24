@@ -7,9 +7,9 @@ auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
 orch = BaseOrchestrator(auth)
 
 
-action_name_1 = 'action1'
-action_name_2 = 'action2'
-action_name_3 = 'action3'
+action_name_1 = 'sampleaction1'
+action_name_2 = 'sampleaction2'
+action_name_3 = 'sampleaction3'
 
 
 async def run_single_action(action_name, params):
@@ -25,6 +25,7 @@ async def run_single_action(action_name, params):
 
 async def main():
     params = 'My Name'
+    orch.start()
 
     print("** Action 1 **")
     action_1_result = await run_single_action(action_name_1, params)
@@ -38,6 +39,7 @@ async def main():
     action_3_result = await run_single_action(action_name_3, action_2_result)
     print(f"** Output of Action 3: {action_3_result} **")
 
+    orch.stop()
 
 if __name__ == "__main__":
     asyncio.run(main())

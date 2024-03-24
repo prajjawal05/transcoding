@@ -414,10 +414,11 @@ class BaseOrchestrator:
             else:
                 for i, attempt in enumerate(attempts):
                     print(f"Attempt {(i+1)} - Time Taken: {attempt['time']}")
-            print("Data read: {}".format(
-                action_object_metrics['metrics'][action_id]['object_read_sz']))
-            print("Data written: {}".format(
-                action_object_metrics['metrics'][action_id]['object_write_sz']))
+            if action_id in action_object_metrics['metrics']:
+                print("Data read: {}".format(
+                    action_object_metrics['metrics'][action_id]['object_read_sz']))
+                print("Data written: {}".format(
+                    action_object_metrics['metrics'][action_id]['object_write_sz']))
         print()
         print("** Object Metrics **")
         print("--------------------")
