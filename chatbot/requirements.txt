@@ -1,0 +1,5 @@
+numpy
+minio==7.1.8
+requests
+pymongo
+# scipy
