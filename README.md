@@ -40,3 +40,11 @@ To setup cluster, run:
 
 To delete cluster, run:
 `kind delete cluster --name kind`
+
+### Existing action
+
+If you plan on running existing actions follow this [document](https://github.com/prajjawal05/transcoding/blob/main/Setting-up.md).
+
+### Creating Action
+
+If you plan on running existing actions follow this [document](https://github.com/prajjawal05/transcoding/blob/main/Create-Action.md).

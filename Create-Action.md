@@ -41,6 +41,8 @@ Use the file `run-action-local.py` in the root directory to test your actions. U
 
 #### Deployment Dependency resolution
 
+_(build-docker.sh)_
+
 - List out the requirements in requirements.txt
 - If you plan on using Docker:
   - You can specify the installation there.
@@ -59,6 +61,8 @@ Use the file `run-action-local.py` in the root directory to test your actions. U
 
 #### Deployment
 
+_(deploy-script.sh)_
+
 - If you have just a single action file with no dependency files. You can use:
   `wsk action create <actionname_you_want> <filename>.py`
 
@@ -68,4 +72,29 @@ Use the file `run-action-local.py` in the root directory to test your actions. U
 - If you have a docker image that you want to use add an extra flag with the above command:
   `--docker <docker-image-url>`
 
-<!-- ### Orchestrator (Optional) -->
+### Orchestrator (Optional)
+
+As the name suggests, it will help you to orchestrate the actions that have been deployed in openwhisk. There is a [BaseOrchestrator.py](https://github.com/prajjawal05/transcoding/blob/main/BaseOrchestrator.py) file which acts as a boilerplate and helps with many functionalities, the details of which are present [here](https://github.com/prajjawal05/transcoding/blob/main/README.md#base-orchestrator).
+
+#### Building
+
+Steps that will help you with BaseOrchestrator:
+
+- Initialise the BaseOrchestrator class with an auth tuple. Use `wsk property get --auth` to get the data for it.
+- As soon as you start your orchestrator, call the `start` function, this will initialise your orchestrator with an orch_id along with a few other things.
+- Call `prepare_action` function to get the body for calling actions, something like `orch.prepare_action(action_name, params)`
+- Invoke the action by calling `orch.make_action`. This is an asynchronous function and will take in the parameters like list of actions, concurrency limit, retries and object ownership.
+- If object ownership is false, i.e, there are many actions which are writing onto a single object sequentially, handling retries would be slower in that case.
+- Response would be a list of action response where each item will be a dict. The dict would have a boolean attribute called success which will signify if the action succeeded or not.
+- If multiple actions were passed there could be a possibility that the response would have some success result while some failure results.
+- Once everything is done, call the `start` function. This will mark the orchestration as completed and will output some metrics.
+
+#### Running
+
+- Make sure your actions are deployed.
+- Install the requirements present in `requirements.txt` present in the root level.
+- Orchestrator needs MongoDB and the object_store.
+  - Ensure your constants.py have the correct value required for both of them.
+  - For running minio use: `minio server miniodata`.
+  - For mongod use: `mongod --config /usr/local/etc/mongod.conf --fork`.
+- Modify `run-orchestrator.py` file and run your orchestrator.
