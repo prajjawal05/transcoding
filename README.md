@@ -10,7 +10,7 @@ This repository is structured in a way it can hold multiple actions.
 
 #### Actions
 
-At the time this readme was written, it had three sample applications: chatbot, transcoder and a sample. Each of those will be explained in detail later.
+At the time this readme was written, it had three sample applications: [chatbot](https://github.com/prajjawal05/transcoding/tree/main/chatbot), [transcoder](https://github.com/prajjawal05/transcoding/tree/main/transcoder) and a [sample](https://github.com/prajjawal05/transcoding/tree/main/sample). Each of those will be explained in detail inside the directories.
 
 #### Object Store
 
