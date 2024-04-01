@@ -6,10 +6,9 @@ Based on: [AWS Lambda Benchmark](https://github.com/icanforce/Orion-OSDI22/tree/
 
 ## Pre-requisites
 
-1. You would need to install `ffmpeg` first.
-2. Run `pip3 install -r requirements.txt`.
-3. You would need minio object store running somewhere.
-4. MongoDB is also required for storing action states.
+1. Run `pip3 install -r requirements.txt`.
+2. You would need minio object store running somewhere.
+3. MongoDB is also required for storing action states.
 
 ### Running services locally.
 

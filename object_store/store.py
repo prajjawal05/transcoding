@@ -59,7 +59,6 @@ class ObjectStore:
             return
         print('Initialising Minio client')
 
-        # to be done inside ffmpeg client
         for bucket in buckets:
             os.makedirs(bucket, exist_ok=True)
         try:
