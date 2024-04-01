@@ -24,12 +24,31 @@ def get_mongo_client(config):
 
 
 class ObjectStore:
+    """
+    A simple class that is used connecting to the object store while also storing some metrics in MongoDB.
+    """
     client = None
     endpoint = None
     access_key = None
     secret_key = None
 
     def __init__(self, config={}, buckets=[], db_config={}):
+        """
+        Initialises object store
+
+        Parameters
+        ----------
+        config: contains configuration details for connecting to Object store.
+        bucket : str[]
+            The buckets that you want to create, if it does not already exists.
+        db_config : str
+            contains configuration details for the document store where metrics will be stored.
+
+        Returns
+        -------
+        None
+
+        """
         self.endpoint = config.get("STORAGE_ENDPOINT")
         self.access_key = config.get("AWS_ACCESS_KEY_ID")
         self.secret_key = config.get("AWS_SECRET_ACCESS_KEY")
@@ -97,13 +116,23 @@ class ObjectStore:
             upsert=True
         )
 
-    def put_copy_url(self, bucket, file_path):
-        return self.client.get_presigned_url('PUT', bucket, file_path)
-
-    def get_copy_url(self, bucket, file_path):
-        return self.client.get_presigned_url('GET', bucket, file_path)
-
     def put_sync(self, context, bucket, file_name):
+        """
+        From the "bucket/file_name" directory, puts the object into bucket and file.
+
+        Parameters
+        ----------
+        context: contains details for orchestration and action
+        bucket : str
+            The bucket which has the object
+        file_name : str
+            The file_name which is the object
+
+        Returns
+        -------
+        None
+
+        """
         if not self.client:
             return
         object_path = f"{bucket}/{file_name}"
@@ -112,6 +141,22 @@ class ObjectStore:
                            os.path.getsize(object_path), 'put')
 
     def get_sync(self, context, bucket, file_name):
+        """
+        From the bucket and file, puts the object into "bucket/file_name"
+
+        Parameters
+        ----------
+        context: contains details for orchestration and action
+        bucket : str
+            The bucket which has the object
+        file_name : str
+            The file_name which is the object
+
+        Returns
+        -------
+        None
+
+        """
         if not self.client:
             return
         object_path = f"{bucket}/{file_name}"
@@ -130,10 +175,22 @@ class ObjectStore:
         # object_path = f"{bucket}/{file_name}"
         self.client.remove_object(bucket, file_name)
 
-    def get_file_name(self, file_name):
-        return 's3://{}/{}'.format(self.endpoint, file_name) if self.endpoint else file_name
-
     def get_action_ids_for_objects(self, keys):
+        """
+        Fetches the action_id that was responsible for writing data to the object store for each key.
+        It is generally required for retrying an action when NoSuchKey exception is found.
+
+        Parameters
+        ----------
+        keys : str[]
+            List of object keys for which action ids are required
+
+        Returns
+        -------
+        str[]
+            action id responsible for writing to the object
+
+        """
         objects = []
         for key in keys:
             result = self.db_collection.find_one({"objects_put.object": key})
@@ -143,6 +200,23 @@ class ObjectStore:
         return list(map(lambda action: ObjectId(action['action_id']), objects))
 
     def get_all_action_ids_for_objects(self, keys):
+        """
+        Fetches the action_id that was responsible for writing data to the object store for each key.
+        It is generally required for retrying an action when NoSuchKey exception is found and the object ownership is False.
+
+
+        Parameters
+        ----------
+        keys : str[]
+            List of object keys for which action ids are required
+
+        Returns
+        -------
+        str[][]
+            List of action ids for each key responsible for writing to the object.
+            Each individual list is sorted by timestamp.
+
+        """
         objects = []
         for key in keys:
             object_for_key = []
@@ -163,6 +237,23 @@ class ObjectStore:
         return objects
 
     def get_metrics_for_actions(self, orch_id, action_ids):
+        """
+        Fetches the size and number of objects read/write for action and orchestration.
+
+        Parameters
+        ----------
+        orch_id : str
+            Orchestration Id for which metrics is required
+        action_ids : str[]
+            List of action_ids
+
+        Returns
+        -------
+        object
+            An object consisting of number of object read/write and the total size that is read/write. 
+            It also consists of the details action wise.
+
+        """
         actions_info = list(self.db_collection.find(
             {'_id': {'$in': action_ids}}))
         action_metrics = dict()
@@ -206,6 +297,22 @@ class ObjectStore:
         }
 
     def get_metrics_for_objects(self, orch_id, objects):
+        """
+        Fetches the earliest put time and latest get time for a pair of object and orchestration.
+
+        Parameters
+        ----------
+        orch_id : str
+            Orchestration Id for which metrics is required
+        objects : str[]
+            Objects for which metrics is required.
+
+        Returns
+        -------
+        array_like
+            An array of objects, where each element is an object.
+
+        """
         result = []
         for object in objects:
             objects_put_info = self.db_collection.find(
