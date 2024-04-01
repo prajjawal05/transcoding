@@ -38,6 +38,7 @@ async def main():
         "input": "facebook.mp4"
     }
 
+    # you need to call start function
     orch.start()
 
     split_action = orch.prepare_action(action_name, params)
@@ -47,7 +48,6 @@ async def main():
 
     chunks = split_results['result']['splits']
 
-    # store.remove_object({}, CHUNKS_BUCKET_NAME, chunks[2])
     print(f"** Transcoding in batches of: {transcoding_parallelisation} **")
 
     transcoding_actions = []
@@ -67,6 +67,7 @@ async def main():
         if not res['success']:
             raise Exception('Some transcoding Unsuccessful')
 
+    # shows the retry feature, in case of NoSuchKeyException
     store.remove_object({}, TRANSCODED_CHUNKS_NAME, chunks[0])
 
     print("** Combining **")
@@ -83,6 +84,7 @@ async def main():
     print("Output available at: {}".format(
         combine_results['result']['output_file']))
 
+    # you need to call stop function
     orch.stop()
 
 

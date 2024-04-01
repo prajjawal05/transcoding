@@ -13,6 +13,9 @@ action_name_3 = 'sampleaction3'
 
 
 async def run_single_action(action_name, params):
+    '''
+    this is just a wrapper to invoke action and get response
+    '''
     input = {
         "input": params
     }
@@ -25,6 +28,8 @@ async def run_single_action(action_name, params):
 
 async def main():
     params = 'My Name'
+
+    # you need to call start function
     orch.start()
 
     print("** Action 1 **")
@@ -39,6 +44,7 @@ async def main():
     action_3_result = await run_single_action(action_name_3, action_2_result)
     print(f"** Output of Action 3: {action_3_result} **")
 
+    # you need to call stop function
     orch.stop()
 
 if __name__ == "__main__":

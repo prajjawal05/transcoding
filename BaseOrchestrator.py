@@ -40,6 +40,9 @@ class BaseOrchestrator:
         self.db_collection: collection.Collection = client['openwhisk']['actions']
 
     def start(self):
+        """
+        Creates an orhcestration id for associating to every action that is made.
+        """
         self.orch_id = client['openwhisk']['orchestrations'].insert_one({
             'creation_ts': datetime.now(),
         }).inserted_id
@@ -66,6 +69,21 @@ class BaseOrchestrator:
             filter(lambda x: x is not None, self.activation_ids))
 
     def prepare_action(self, name, params):
+        """
+        Creates a request body that can be passed to make_action function
+
+        Parameters
+        ----------
+        name : str
+            The name of action
+        params : obj
+            The parameters which we are supposed to pass to the action.
+
+        Returns
+        -------
+        object: containing the request body
+
+        """
         return {
             'name': name,
             'body': params,

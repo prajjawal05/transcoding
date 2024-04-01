@@ -1,6 +1,7 @@
 mkdir deployment
 
 # Copy transcodingActions.py and constants.py to the temporary directory
+# need to rename actions.py to __main__.pyu
 cp actions.py deployment/__main__.py
 cp ../constants.py deployment/
 

@@ -1,6 +1,7 @@
 mkdir deployment
 
-# Copy transcodingActions.py and constants.py to the temporary directory
+# Copy required files to the temporary directory
+# need to rename the action file
 cp split-action.py deployment/__main__.py
 cp Intent.json deployment/
 cp ../constants.py deployment/
@@ -9,7 +10,7 @@ cp ../constants.py deployment/
 cd deployment
 zip -r action.zip *
 
-# Move the zip file back to the original directory if needed
+# creating openwhisk action
 wsk action create split-action action.zip --docker docker.io/prajjawal05/chatbot:latest --insecure
 
 rm action.zip

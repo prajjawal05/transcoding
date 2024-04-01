@@ -14,6 +14,7 @@ PROCESSED_VIDEO_BUCKET = 'processed-video'
 INPUT_VIDEO_BUCKET = 'input-video'
 
 
+# passing config and the buckets that I want to create.
 store = store.ObjectStore(config,
                           [CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME,
                               PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET],
@@ -156,9 +157,12 @@ class InvalidOperationException(Exception):
     def __str__(self) -> str:
         return self.message
 
+# need to have a main() function
+
 
 def main(args):
     context = args["context"]
+    # context object is needed when calling object_store functions
 
     try:
         if args["type"] == "chunk":
