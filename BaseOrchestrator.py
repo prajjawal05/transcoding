@@ -37,13 +37,14 @@ class BaseOrchestrator:
             db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
         self.orch_id = None
         self.actions_ids = set()
+        self.orch_collection: collection.Collection = client['openwhisk']['orchestrations']
         self.db_collection: collection.Collection = client['openwhisk']['actions']
 
     def start(self):
         """
         Creates an orhcestration id for associating to every action that is made.
         """
-        self.orch_id = client['openwhisk']['orchestrations'].insert_one({
+        self.orch_id = self.orch_collection.insert_one({
             'creation_ts': datetime.now(),
         }).inserted_id
         self.orch_start = datetime.now()
@@ -404,8 +405,12 @@ class BaseOrchestrator:
         return results
 
     def stop(self):
+        orch_finish_ts = datetime.now()
+        self.time_taken = (orch_finish_ts - self.orch_start).total_seconds()
+
+        self.action_time_taken = 0
         print(
-            f'\nOrchestrator {self.orch_id} stopped. It ran for: {datetime.now() - self.orch_start}')
+            f'\nOrchestrator {self.orch_id} stopped. It ran for: {self.time_taken}s')
 
         action_ids = list(self.actions_ids)
         actions_info = list(self.db_collection.find(
@@ -429,9 +434,11 @@ class BaseOrchestrator:
             print(f"Number of attempts - {len(attempts)}")
             if len(attempts) == 1:
                 print(f"Time taken - {attempts[0]['time']}")
+                self.action_time_taken += attempts[0]['time']
             else:
                 for i, attempt in enumerate(attempts):
                     print(f"Attempt {(i+1)} - Time Taken: {attempt['time']}")
+                    self.action_time_taken += attempt['time']
             if action_id in action_object_metrics['metrics']:
                 print("Data read: {}".format(
                     action_object_metrics['metrics'][action_id]['object_read_sz']))
@@ -467,6 +474,23 @@ class BaseOrchestrator:
                 print(
                     f"Object Orchestration Lifetime: {datetime.utcnow() - object['put_time']}")
 
+        self.orch_collection.update_one(
+            {'_id': self.orch_id}, {'$set': {
+                'finish_ts': orch_finish_ts,
+                'time_taken': self.time_taken,
+                'action_time_taken': self.action_time_taken,
+                'data_stored': action_object_metrics['total_object_write_sz']
+            }})
+
+    def get_orch_details(self, orch_id):
+        if not isinstance(orch_id, ObjectId):
+            orch_id = ObjectId(orch_id)
+
+        orch_details = self.orch_collection.find_one({'_id': orch_id})
+        if not orch_details:
+            raise Exception('Orchestration with such id does not exists.')
+
+        return orch_details
         # print(action_object_metrics['objects_used'])
 
 
