@@ -27,6 +27,10 @@ There is a file called `BaseOrchestrator.py`. Application owners who want to wri
 5. It tries to instrument as many things as possible in a MongoDB collection.
 6. It logs information in a file along with the orchestration ID generated for each orchestration.
 
+#### Orchestrator Calculator
+
+There is a file called `OrchestratorCalculator.py`. It has a function which compares the compute charge and storage charge and returns which option should be preferred for saving cost.
+
 #### Constants
 
 `constants.py` has the details related to hosts and port used for document storage and object storage layer as well as any access keys if present.
