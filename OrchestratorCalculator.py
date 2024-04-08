@@ -18,11 +18,32 @@ class OrchestratorCalculator:
         }
 
     def compare(self, orch_id, compute_cost, object_cost):
+        """
+        This function compares the compute charge and storage charge and returns which option should be preferred
+        for saving cost.
+
+        Parameters
+        ----------
+        orch_id : ObjectId
+            ID of Orchestration which is preferred
+
+        compute_cost: number
+            cost per time for the total computation
+
+        object_cost: number
+            cost per byte in storing the data used throughout.
+
+        Returns
+        -------
+        str
+            preferred option: compute or storage
+
+        """
         details = self.__get_details(orch_id)
         compute_charge = details['time_taken'] * compute_cost
-        object_charge = details['data_stored'] * object_cost
+        storage_charge = details['data_stored'] * object_cost
 
-        return 'compute' if compute_charge < object_charge else 'object'
+        return 'compute' if compute_charge < storage_charge else 'storage'
 
 
 if __name__ == '__main__':

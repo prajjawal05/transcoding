@@ -49,14 +49,43 @@ class BaseOrchestrator:
         }).inserted_id
         self.orch_start = datetime.now()
 
-    def __extract_activation_ids(self, act_dict):
-        return act_dict['activationId']
-
     def __get_call(self, api_url):
+        """
+        Makes a GET api call to the given url with insecure flag as true.
+        Used for polling and getting the data.
+        Parameters
+        ----------
+        api_url : str
+            Url to fetch
+
+        Returns
+        -------
+        dict
+            json response from the api call
+
+        """
         response = requests.get(api_url, auth=self.auth, verify=False)
         return response.json()
 
     def __post_call(self, api_url, action_id, params):
+        """
+        Makes a POST api call to the given url with insecure flag as true.
+        Used for invoking openwhisk action.
+        Parameters
+        ----------
+        api_url : str
+            Url to use
+        action_id: ObjectId
+            to be passed as a context to the action
+        params: dict
+            parameters to be passed to action being invoked
+
+        Returns
+        -------
+        dict
+            json response from the api call
+
+        """
         headers = {"Content-Type": "application/json"}
         context = {"action_id": str(action_id), "orch_id": str(self.orch_id)}
         self.actions_ids.add(action_id)
@@ -66,6 +95,10 @@ class BaseOrchestrator:
         return response.json()
 
     def _get_active_ids(self):
+        """    
+        returns non None items in the activation_ids array.
+        Used for finding the number of active actions at the time. 
+        """
         return list(
             filter(lambda x: x is not None, self.activation_ids))
 
@@ -91,7 +124,24 @@ class BaseOrchestrator:
         }
 
     async def __poller(self, num_to_poll):
+        """
+        Polling function that keeps running in the event loop.
+
+        Parameters
+        ----------
+        num_to_poll : number
+            The number of action that the function will poll before it stops
+
+        Returns
+        -------
+        dict[]
+            final response from all the actions that were polled.
+
+        """
         def _get_url(activation_id):
+            """
+            returns a url that can be used for polling and getting details for a particular activation id.
+            """
             return "{}/guest/activations/{}".format(self.url, activation_id)
 
         num_polled = 0
@@ -145,6 +195,22 @@ class BaseOrchestrator:
         return results
 
     async def __make_action(self, actions, parallelisation=2):
+        """
+        Invokes openwhisk actions considering parallelisation into account. Note that this has nothing to do with retry mechanisms.
+        This is like a lower level of caller. This is also responsible for invoking the poller.
+        Parameters
+        ----------
+        actions : dict[]
+            A array of multiple actions each containing action_id, action_name, and action_params
+        parallelisation: int
+            The maximum concurrency that is allowed
+
+        Returns
+        -------
+        dict[]
+            response from all the actions.
+
+        """
         self.start_times = dict()
         start = datetime.now()
 
@@ -168,8 +234,7 @@ class BaseOrchestrator:
             print(f"Performing action for: {action}")
             action_response = self.__post_call(
                 _get_url(action['name']), action['action_id'], action['body'])
-            activation_id = self.__extract_activation_ids(
-                action_response)
+            activation_id = action_response['activationId']
             self.activation_ids[i] = {
                 'activation_id': activation_id, 'action_id': action['action_id']}
             attempt_ts = datetime.now()
@@ -191,7 +256,33 @@ class BaseOrchestrator:
         return results
 
     async def __make_action_with_id_for_object_issues(self, action_key_map, retries=3, parallelisation=2, ignore_objects_error=[]):
-        # finding parents
+        """
+        When an action throws NoSuchKeyException this retry handler is called. It gets the action_id which was responsible for writing the object
+        with that particular key and retries those actions to recreate the objects before returning the control for the main function to retry the 
+        original action again. 
+        This is a recursive function.
+
+        Parameters
+        ----------
+        action_key_map : dict[]
+            The dict is of action_id and the key that was responsible.
+
+        retries: number
+            Number of retries for the parent
+
+        parallelisation: number
+            maximum number of concurrency for parent objects to run
+
+        ignore_object_errors: str[]
+            It stores the key of all the objects for which retries have been done. This is kept as a check so that an issue for the same key should not be
+            solved again and again.
+
+        Returns
+        -------
+        dict[]
+            response from all the parent actions.
+
+        """
         parent_actions = self.store.get_action_ids_for_objects(
             list(map(lambda mp: mp['key'], action_key_map)))
         results = [None] * len(action_key_map)
@@ -230,6 +321,31 @@ class BaseOrchestrator:
         return results
 
     async def __make_action_with_id_for_multiparent_object_issues(self, action_key_map, retries=3, parallelisation=2, ignore_objects_error=[]):
+        """
+        Same as __make_action_with_id_for_object_issues. This function is used when object_ownership is false and is less optimal to handle lesser edge cases.
+
+        Parameters
+        ----------
+        action_key_map : dict[]
+            The dict is of action_id and the key that was responsible.
+
+        retries: number
+            Number of retries for the parent
+
+        parallelisation: number
+            maximum number of concurrency for parent objects to run
+
+        ignore_object_errors: str[]
+            It stores the key of all the objects for which retries have been done. This is kept as a check so that an issue for the same key should not be
+            solved again and again.
+
+        Returns
+        -------
+        dict[]
+            response from all the parent actions.
+
+        """
+
         # finding parents
         parent_actions = self.store.get_all_action_ids_for_objects(
             list(map(lambda mp: mp['key'], action_key_map)))
@@ -280,6 +396,33 @@ class BaseOrchestrator:
         return results
 
     async def __make_action_with_id(self, action_ids, retries=3, parallelisation=2, ignore_objects_error=[], object_ownership=True):
+        """
+        This function handles retries and invoking the openwhisk action.
+
+        Parameters
+        ----------
+        action_ids : ObjectId[]
+            List of action ids (details present in document store) which are to be invoked.
+
+        retries: number
+            Number of retries for the parent
+
+        parallelisation: number
+            maximum number of concurrency for parent objects to run
+
+        ignore_object_errors: str[]
+            It stores the key of all the objects for which retries have been done. This is kept as a check so that an issue for the same key should not be
+            solved again and again.
+
+        object_ownership: boolean
+            This signifies whether there are multiple actions that write onto a single key or if a single ownership exists.
+
+        Returns
+        -------
+        dict[]
+            response from all the parent actions.
+
+        """
         actions_info = list(self.db_collection.find(
             {'_id': {'$in': action_ids}}))
         actions = [{
@@ -388,6 +531,29 @@ class BaseOrchestrator:
         return results
 
     async def make_action(self, actions, retries=3, parallelisation=2, object_ownership=True):
+        """
+        This writes action records to document store and calls __make_action_with_id.
+
+        Parameters
+        ----------
+        actions : ObjectId[]
+            List of actions (name and parameters) which are to be invoked.
+
+        retries: number
+            Number of retries for the parent
+
+        parallelisation: number
+            maximum number of concurrency for parent objects to run
+
+        object_ownership: boolean
+            This signifies whether there are multiple actions that write onto a single key or if a single ownership exists.
+
+        Returns
+        -------
+        dict[]
+            response from all the parent actions.
+
+        """
         if not self.orch_id:
             print('Orchestrator not started')
             raise Exception('Orchestrator not started')
@@ -405,6 +571,10 @@ class BaseOrchestrator:
         return results
 
     def stop(self):
+        """
+        This marks the end of the orchestrator. It prints a few metrics that have been instrumented throughout and stores a few more details
+        to the document store.
+        """
         orch_finish_ts = datetime.now()
         self.time_taken = (orch_finish_ts - self.orch_start).total_seconds()
 
@@ -483,6 +653,20 @@ class BaseOrchestrator:
             }})
 
     def get_orch_details(self, orch_id):
+        """
+        This returns details that were saved at the orchestration level in the document store.
+
+        Parameters
+        ----------
+        orch_id : ObjectId
+            The orchestrator id for which details are required.
+
+        Returns
+        -------
+        dict
+            data saved for the orchestration
+
+        """
         if not isinstance(orch_id, ObjectId):
             orch_id = ObjectId(orch_id)
 
