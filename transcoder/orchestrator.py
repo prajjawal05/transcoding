@@ -39,7 +39,7 @@ async def main():
     }
 
     # you need to call start function
-    orch.start()
+    orch.start('transcoder')
 
     split_action = orch.prepare_action(action_name, params)
     split_results = (await orch.make_action([split_action]))[0]

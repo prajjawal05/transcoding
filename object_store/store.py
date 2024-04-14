@@ -235,7 +235,7 @@ class ObjectStore:
 
         return objects
 
-    def get_metrics_for_actions(self, orch_id, action_ids):
+    def get_metrics_for_actions(self, orch_id=None, action_ids=[]):
         """
         Fetches the size and number of objects read/write for action and orchestration.
 
@@ -267,13 +267,13 @@ class ObjectStore:
 
             if 'objects_get' in info:
                 for object_read in info['objects_get']:
-                    if not object_read['orch_id'] == orch_id:
+                    if orch_id and not object_read['orch_id'] == orch_id:
                         continue
                     objects_read.add(object_read['object'])
                     object_read_sz += object_read['size']
             if 'objects_put' in info:
                 for object_wrote in info['objects_put']:
-                    if not object_wrote['orch_id'] == orch_id:
+                    if orch_id and not object_wrote['orch_id'] == orch_id:
                         continue
                     objects_written.add(object_wrote['object'])
                     object_write_sz += object_wrote['size']
@@ -295,7 +295,7 @@ class ObjectStore:
             'total_object_write_sz': total_object_write_sz,
         }
 
-    def get_metrics_for_objects(self, orch_id, objects):
+    def get_metrics_for_objects(self, orch_id=None, objects=[]):
         """
         Fetches the earliest put time and latest get time for a pair of object and orchestration.
 
@@ -317,30 +317,34 @@ class ObjectStore:
             objects_put_info = self.db_collection.find(
                 {"objects_put.object": object})
             put_time = None
+            put_size = 0
             for info in objects_put_info:
                 if not 'objects_put' in info:
                     continue
                 for obj in info['objects_put']:
-                    if not obj['orch_id'] == orch_id:
+                    if orch_id and not obj['orch_id'] == orch_id:
                         continue
                     if not obj['object'] == object:
                         continue
                     if not put_time or put_time > obj['time']:
                         put_time = obj['time']
+                        put_size += obj['size']
 
             objects_get_info = self.db_collection.find(
                 {"objects_get.object": object})
             get_time = None
+            get_size = 0
             for info in objects_get_info:
                 if not 'objects_get' in info:
                     continue
                 for obj in info['objects_get']:
-                    if not obj['orch_id'] == orch_id:
+                    if orch_id and not obj['orch_id'] == orch_id:
                         continue
                     if not obj['object'] == object:
                         continue
                     if not get_time or get_time < obj['time']:
                         get_time = obj['time']
+                        get_size += obj['size']
 
             lifetime = None
             if get_time and put_time:
@@ -350,7 +354,9 @@ class ObjectStore:
                 'object': object,
                 'put_time': put_time,
                 'get_time': get_time,
-                'lifetime': lifetime
+                'lifetime': lifetime,
+                'put_size': put_size,
+                'get_size': get_size,
             })
 
         return result

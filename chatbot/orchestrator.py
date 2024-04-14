@@ -14,7 +14,7 @@ async def main():
         "Network_Bound": 1
     }
 
-    orch.start()
+    orch.start('chatbot')
 
     split_action = orch.prepare_action('split-action', params)
     split_results = (await orch.make_action([split_action]))[0]

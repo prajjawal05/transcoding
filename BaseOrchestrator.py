@@ -7,6 +7,8 @@ from datetime import datetime
 from bson import ObjectId
 from pymongo import MongoClient, collection, UpdateOne
 
+from typing import List
+
 from object_store import store
 from constants import MONGO_HOST, MONGO_PORT
 
@@ -40,11 +42,12 @@ class BaseOrchestrator:
         self.orch_collection: collection.Collection = client['openwhisk']['orchestrations']
         self.db_collection: collection.Collection = client['openwhisk']['actions']
 
-    def start(self):
+    def start(self, name: str):
         """
         Creates an orhcestration id for associating to every action that is made.
         """
         self.orch_id = self.orch_collection.insert_one({
+            'name': name,
             'creation_ts': datetime.now(),
         }).inserted_id
         self.orch_start = datetime.now()
@@ -630,6 +633,8 @@ class BaseOrchestrator:
             self.orch_id, action_object_metrics['objects_read'].union(action_object_metrics['objects_written']))
         object_metrics = sorted(
             object_metrics, key=lambda x: x['put_time'] or x['get_time'])
+
+        output_object_metrics = []
         for object in object_metrics:
             print()
             print(f"Object name: {object['object']}")
@@ -643,13 +648,19 @@ class BaseOrchestrator:
                 print(f"First Put: {object['put_time']}")
                 print(
                     f"Object Orchestration Lifetime: {datetime.utcnow() - object['put_time']}")
+            if object['put_size']:
+                output_object_metrics.append({
+                    'name': object['object'],
+                    'lifetime': (datetime.utcnow() - object['put_time']).total_seconds(),
+                    'size_written': object['put_size'],
+                })
 
         self.orch_collection.update_one(
             {'_id': self.orch_id}, {'$set': {
                 'finish_ts': orch_finish_ts,
                 'time_taken': self.time_taken,
                 'action_time_taken': self.action_time_taken,
-                'data_stored': action_object_metrics['total_object_write_sz']
+                'object_metrics': output_object_metrics,
             }})
 
     def get_orch_details(self, orch_id):
@@ -676,6 +687,99 @@ class BaseOrchestrator:
 
         return orch_details
         # print(action_object_metrics['objects_used'])
+
+    def get_all_orchs(self, orch_name: str) -> List[ObjectId]:
+        """
+        This returns all the orchestration ids associated with the name
+
+        Parameters
+        ----------
+        orch_name : str
+            The orchestrator name for which ids are required.
+
+        Returns
+        -------
+        str[]
+            ids saved for the orchestration
+
+        """
+        orch_ids = []
+        results = self.orch_collection.find({'name': orch_name})
+        for res in results:
+            orch_ids.append(res['_id'])
+
+        return orch_ids
+        # print(action_object_metrics['objects_used'])
+
+    def get_all_actions_for_id(self, action_name: str) -> List[ObjectId]:
+        """
+        This returns all the action ids associated with the name
+
+        Parameters
+        ----------
+        action_name : str
+            The action name for which ids are required.
+
+        Returns
+        -------
+        str[]
+            ids saved for the action
+
+        """
+        action_ids = []
+        results = self.db_collection.find({'action_name': action_name})
+        for res in results:
+            action_ids.append(res['_id'])
+
+        return action_ids
+        # print(action_object_metrics['objects_used'])
+
+    def get_action_details(self, action_id: ObjectId):
+        """
+        This returns details that were saved at the action and the action-store level in the document store.
+
+        Parameters
+        ----------
+        action_id : ObjectId
+            The action id for which details are required.
+
+        Returns
+        -------
+        dict
+            data saved for the action
+
+        """
+        time_taken = 0
+        action_info = self.db_collection.find_one({'_id': action_id})
+        for attempt in action_info['attempts']:
+            time_taken += attempt['time']
+
+        time_taken /= len(action_info['attempts'])
+        action_object_metrics = self.store.get_metrics_for_actions(
+            action_ids=[action_id])
+
+        if not action_object_metrics:
+            return {
+                "time_taken": time_taken,
+                'object_metrics': [],
+            }
+
+        object_metrics = self.store.get_metrics_for_objects(
+            objects=action_object_metrics['objects_written'])
+
+        output_object_metrics = []
+        for object in object_metrics:
+            if object['put_size']:
+                output_object_metrics.append({
+                    'name': object['object'],
+                    'lifetime': (datetime.utcnow() - object['put_time']).total_seconds(),
+                    'size_written': object['put_size'],
+                })
+
+        return {
+            'time_taken': time_taken,
+            'object_metrics': output_object_metrics,
+        }
 
 
 async def main():

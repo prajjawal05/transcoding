@@ -30,7 +30,7 @@ async def main():
     params = 'My Name'
 
     # you need to call start function
-    orch.start()
+    orch.start('sample')
 
     print("** Action 1 **")
     action_1_result = await run_single_action(action_name_1, params)
