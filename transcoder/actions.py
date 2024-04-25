@@ -24,7 +24,7 @@ store = store.ObjectStore(config,
 
 
 def get_epoch():
-    return int(datetime.now().timestamp())
+    return int(datetime.utcnow().timestamp())
 
 
 class Resolution(Enum):
@@ -52,7 +52,7 @@ class AudioVideo:
     @staticmethod
     def concatenate(context, files):
         print('Starting to combine')
-        start = datetime.now()
+        start = datetime.utcnow()
         epoch = get_epoch()
         video_streams = []
         audio_streams = []
@@ -80,7 +80,7 @@ class AudioVideo:
             ffmpeg.output(concatenated_video, output_file).run(
                 overwrite_output=True, quiet=True)
 
-        end = datetime.now()
+        end = datetime.utcnow()
 
         store.put_sync(context, PROCESSED_VIDEO_BUCKET, output_file_name)
         print('Completed combining in {}'.format(end-start))
@@ -100,7 +100,7 @@ class AudioVideo:
         chunk_size = int(duration / num_chunks)
         epoch = get_epoch()
 
-        start = datetime.now()
+        start = datetime.utcnow()
         for i in range(num_chunks):
             output_file_name = f"chunk_{i}_{epoch}.mp4"
             output_file = f"{CHUNKS_BUCKET_NAME}/{output_file_name}"
@@ -112,7 +112,7 @@ class AudioVideo:
 
         print("Splits are: {}".format(splits))
 
-        end = datetime.now()
+        end = datetime.utcnow()
 
         print('Completed chunking in {}'.format(end-start))
 
@@ -135,13 +135,13 @@ class Transcoder(object):
         return process
 
     def transcode(self, context, input_file, resolution_format):
-        start = datetime.now()
+        start = datetime.utcnow()
 
         print("Processing input_file - {}".format(input_file))
         self.__transcode_into_type(context, input_file, resolution_format)
         store.put_sync(context, TRANSCODED_CHUNKS_NAME, input_file)
 
-        end = datetime.now()
+        end = datetime.utcnow()
 
         print('Transcoded input_file in {}'.format(end-start))
 
