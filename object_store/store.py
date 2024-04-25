@@ -237,6 +237,27 @@ class ObjectStore:
 
         return objects
 
+    def get_objects_involved(self, orch_id: ObjectId):
+        orch_info = list(self.db_collection.find(
+            {'orch_id': str(orch_id)}))
+        objects_read = set()
+        objects_written = set()
+
+        for info in orch_info:
+            for object_read in info.get('objects_get', []):
+                if not object_read['orch_id'] == orch_id:
+                    continue
+                objects_read.add(object_read['object'])
+            for object_wrote in info.get('objects_put', []):
+                if not object_wrote['orch_id'] == orch_id:
+                    continue
+                objects_written.add(object_wrote['object'])
+
+        return {
+            'objects_read': objects_read,
+            'objects_written': objects_written,
+        }
+
     def get_metrics_for_actions(self, orch_id=None, action_ids=[]):
         """
         Fetches the size and number of objects read/write for action and orchestration.
@@ -405,6 +426,11 @@ class ObjectStore:
                 }
 
         return metrics
+
+    def get_details_object_read(self, orch_id, object):
+        result = self.db_collection.find_one(
+            {"objects_get.object": object, "objects_get.orch_id": orch_id})
+        return result
 
 
 class NoSuchKeyException(Exception):
