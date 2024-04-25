@@ -31,6 +31,9 @@ async def main():
     transcoding_parallelisation = 2
     store = get_store()
 
+    # you need to call start function
+    orch.start('video-transcoding')
+
     print("** Chunking **")
     params = {
         "type": "chunk",
@@ -38,10 +41,7 @@ async def main():
         "input": "facebook.mp4"
     }
 
-    # you need to call start function
-    orch.start('transcoder')
-
-    split_action = orch.prepare_action(action_name, params)
+    split_action = orch.prepare_action('splitter', params)
     split_results = (await orch.make_action([split_action]))[0]
     if not split_results['success']:
         raise Exception('Error splitting in chunks')
@@ -75,7 +75,7 @@ async def main():
         "type": "combine",
         "input": chunks
     }
-    combine_action = orch.prepare_action(action_name, params)
+    combine_action = orch.prepare_action('combiner', params)
     combine_results = (await orch.make_action([combine_action], object_ownership=False))[0]
     if not combine_results['success']:
         raise Exception('Error combining transcoded chunks')

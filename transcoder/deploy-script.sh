@@ -10,7 +10,9 @@ cd deployment
 zip -r action.zip *
 
 # Move the zip file back to the original directory if needed
+wsk action create splitter action.zip --docker docker.io/prajjawal05/transcoder:latest --insecure
 wsk action create transcoder action.zip --docker docker.io/prajjawal05/transcoder:latest --insecure
+wsk action create combiner action.zip --docker docker.io/prajjawal05/transcoder:latest --insecure
 
 rm action.zip
 
