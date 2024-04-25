@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from bson import ObjectId
 from pymongo import MongoClient, collection, UpdateOne
+from collections import defaultdict, namedtuple
 
 from typing import List
 
@@ -48,9 +49,10 @@ class BaseOrchestrator:
         """
         self.orch_id = self.orch_collection.insert_one({
             'name': name,
-            'creation_ts': datetime.now(),
+            'creation_ts': datetime.utcnow(),
         }).inserted_id
-        self.orch_start = datetime.now()
+        self.orch_start = datetime.utcnow()
+        print(f"Orchestration {self.orch_id} started")
 
     def __get_call(self, api_url):
         """
@@ -167,9 +169,10 @@ class BaseOrchestrator:
 
                 result = responseData.get('response').get('result')
                 print(result)
-                time_taken = datetime.now() - self.start_times[activation_id]
+                time_taken = datetime.utcnow(
+                ) - self.start_times[activation_id]
                 update_changes = {
-                    '$push': {'attempts': {'start': self.start_times[activation_id], 'end': datetime.now(), 'time': time_taken.total_seconds(), 'orch_id': self.orch_id}}
+                    '$push': {'attempts': {'start': self.start_times[activation_id], 'end': datetime.utcnow(), 'time': time_taken.total_seconds(), 'orch_id': self.orch_id}}
                 }
                 self.db_collection.update_one(
                     {'_id': action_id}, update_changes)
@@ -215,7 +218,7 @@ class BaseOrchestrator:
 
         """
         self.start_times = dict()
-        start = datetime.now()
+        start = datetime.utcnow()
 
         self.logger.info('Invoking Action requested for {} with {} in parallel'.format(
             len(actions), parallelisation))
@@ -240,7 +243,7 @@ class BaseOrchestrator:
             activation_id = action_response['activationId']
             self.activation_ids[i] = {
                 'activation_id': activation_id, 'action_id': action['action_id']}
-            attempt_ts = datetime.now()
+            attempt_ts = datetime.utcnow()
             update_changes = {
                 '$set': {'last_attempt_ts': attempt_ts},
                 '$push': {'activation_ids': activation_id}
@@ -253,7 +256,7 @@ class BaseOrchestrator:
         await poller_task
         results = poller_task.result()
 
-        end = datetime.now()
+        end = datetime.utcnow()
         self.logger.info(
             'All the actions for this request completed in: {}'.format(end-start))
         return results
@@ -565,7 +568,7 @@ class BaseOrchestrator:
             'orch_id': self.orch_id,
             'action_name': action['name'],
             'action_params': action['body'],
-            'creation_ts': datetime.now(),
+            'creation_ts': datetime.utcnow(),
             'num_attempts': 0,
             'activation_ids': []
         } for action in actions]).inserted_ids
@@ -578,7 +581,7 @@ class BaseOrchestrator:
         This marks the end of the orchestrator. It prints a few metrics that have been instrumented throughout and stores a few more details
         to the document store.
         """
-        orch_finish_ts = datetime.now()
+        orch_finish_ts = datetime.utcnow()
         self.time_taken = (orch_finish_ts - self.orch_start).total_seconds()
 
         self.action_time_taken = 0
@@ -632,8 +635,8 @@ class BaseOrchestrator:
         object_metrics = self.store.get_metrics_for_objects(
             self.orch_id, action_object_metrics['objects_read'].union(action_object_metrics['objects_written']))
         object_metrics = sorted(
-            object_metrics, key=lambda x: x['put_time'] or x['get_time'])
-
+            object_metrics, key=lambda x: x['get_time'] or x['put_time'])
+        input_object = None
         output_object_metrics = []
         for object in object_metrics:
             print()
@@ -643,6 +646,8 @@ class BaseOrchestrator:
                 print(
                     f"Object Orchestration Lifetime: {datetime.utcnow() - object['put_time']}")
             elif object['get_time']:
+                if input_object is None:
+                    input_object = object
                 print(f"Last Get: {object['get_time']}")
             elif object['put_time']:
                 print(f"First Put: {object['put_time']}")
@@ -661,6 +666,7 @@ class BaseOrchestrator:
                 'time_taken': self.time_taken,
                 'action_time_taken': self.action_time_taken,
                 'object_metrics': output_object_metrics,
+                'input_size': input_object.get('get_size', 0)
             }})
 
     def get_orch_details(self, orch_id):
@@ -734,7 +740,7 @@ class BaseOrchestrator:
         return action_ids
         # print(action_object_metrics['objects_used'])
 
-    def get_action_details(self, action_id: ObjectId):
+    def get_action_details(self, action_ids: List[ObjectId], orch_ids: List[ObjectId] = []):
         """
         This returns details that were saved at the action and the action-store level in the document store.
 
@@ -749,45 +755,70 @@ class BaseOrchestrator:
             data saved for the action
 
         """
-        time_taken = 0
-        action_info = self.db_collection.find_one({'_id': action_id})
-        for attempt in action_info['attempts']:
-            time_taken += attempt['time']
+        actions_info = self.db_collection.find({'_id': {'$in': action_ids}})
+        ActionOrchKey = namedtuple('ActionOrchKey', ['action_id', 'orch_id'])
+        action_orchestrator_runtime_map: dict[ActionOrchKey, dict[str, int]] = defaultdict(
+            lambda: {'time': 0, 'attempts': 0})
+        details_map = {}
 
-        time_taken /= len(action_info['attempts'])
-        action_object_metrics = self.store.get_metrics_for_actions(
-            action_ids=[action_id])
+        for info in actions_info:
+            action_id = info['_id']
+            for attempt in info['attempts']:
+                orch_id = attempt['orch_id']
+                if orch_ids and orch_id not in orch_ids:
+                    continue
+                key = ActionOrchKey(action_id, orch_id)
+                action_orchestrator_runtime_map[key]['time'] += attempt['time']
+                action_orchestrator_runtime_map[key]['attempts'] += 1
 
-        if not action_object_metrics:
-            return {
-                "time_taken": time_taken,
-                'object_metrics': [],
+        # if an action is run multiple times for an orchestrator
+        # average would be taken
+        for key, value in action_orchestrator_runtime_map.items():
+            action_id = key.action_id
+            orch_id = key.orch_id
+            if orch_id not in details_map:
+                details_map[orch_id] = {}
+            details_map[orch_id][action_id] = {
+                'runtime': value['time']/value['attempts']
             }
 
-        object_metrics = self.store.get_metrics_for_objects(
-            objects=action_object_metrics['objects_written'])
+        # fetches size of each object that was written by the action
+        # if an action is retried, it has only the latest data
+        action_object_metrics = self.store.get_putmetrics_for_action_across_orchs(
+            action_ids=action_ids, orch_ids=orch_ids)
 
-        output_object_metrics = []
-        for object in object_metrics:
-            if object['put_size']:
-                output_object_metrics.append({
-                    'name': object['object'],
-                    'lifetime': (datetime.utcnow() - object['put_time']).total_seconds(),
-                    'size_written': object['put_size'],
-                })
+        for orch_id, orch_details in action_object_metrics.items():
+            orch_finish_ts = self.orch_collection.find_one({'_id': orch_id})[
+                'finish_ts']
+            for action_id, action_details in orch_details.items():
+                for object_key, object_details in action_details.items():
+                    object_lifetime = (
+                        orch_finish_ts - object_details['put_time']).total_seconds()
+                    action_details[object_key]['lifetime'] = object_lifetime
+                details_map[orch_id][action_id]['objects'] = action_details
 
-        return {
-            'time_taken': time_taken,
-            'object_metrics': output_object_metrics,
-        }
+        if orch_ids:
+            return details_map
+
+        action_details_map = {}
+        for orch_id, orch_details in details_map.items():
+            for action_id, action_details in orch_details.items():
+                action_details_map[action_id] = action_details
+
+        return action_details_map
 
 
 async def main():
     auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
             "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
     orch = BaseOrchestrator(auth)
-    await orch.__make_action_with_id([ObjectId('65b7c55447f9174830c07c6f')], 1)
-
+    action_ids = [ObjectId('6629b51ac1ebc577b2e566b4'),
+                  ObjectId('6629b51ac1ebc577b2e566b7'),
+                  ObjectId('6629b527c1ebc577b2e566b9')]
+    orch_ids = [ObjectId('6629b518c1ebc577b2e566b2')]
+    print(orch.get_action_details(
+        action_ids
+    ))
 
 if __name__ == '__main__':
     asyncio.run(main())

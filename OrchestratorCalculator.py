@@ -82,15 +82,15 @@ class OrchestratorCalculator:
             returns the details used for cost calculation
 
         """
-        details = self.orch.get_action_details(action_id)
+        details = self.orch.get_action_details([action_id])[action_id]
 
         object_cost_coefficient = 0
-        for metric in details['object_metrics']:
+        for metric in details['objects'].values():
             object_cost_coefficient += metric['lifetime'] * \
-                metric['size_written']
+                metric['size']
 
         return {
-            'timeTaken': details['time_taken'],
+            'timeTaken': details['runtime'],
             'objectsCostCoefficient': object_cost_coefficient
         }
 
@@ -238,18 +238,18 @@ if __name__ == '__main__':
     orch_calc = OrchestratorCalculator()
 
     #  Orchestration Cost
-    cost = OrchestrationCostParameters(
-        computeCharge=1, orchestrationComputeCharge=0.5, objectChargePerSizePerDuration=2)
-    print(orch_calc.get_orch_cost_by_id('661c42df67a34ef406610e96', cost))
-    print(orch_calc.get_orch_cost_by_id(
-        ObjectId('661c43ce6e85eda27393bf4c'), cost))
-    print(orch_calc.get_orch_cost_by_name('chatbot', cost))
+    # cost = OrchestrationCostParameters(
+    #     computeCharge=1, orchestrationComputeCharge=0.5, objectChargePerSizePerDuration=2)
+    # print(orch_calc.get_orch_cost_by_id('661c42df67a34ef406610e96', cost))
+    # print(orch_calc.get_orch_cost_by_id(
+    #     ObjectId('661c43ce6e85eda27393bf4c'), cost))
+    # print(orch_calc.get_orch_cost_by_name('chatbot', cost))
 
     #  Action Cost
     action_cost = ActionCostParameters(
         computeCharge=1, objectChargePerSizePerDuration=2)
     print(orch_calc.get_action_cost_by_id(
-        '661c42e667a34ef406610eaa', action_cost))
-    print(orch_calc.get_action_cost_by_id(
-        ObjectId('661c43d66e85eda27393bf62'), action_cost))
-    print(orch_calc.get_action_cost_by_name('split-action', action_cost))
+        '6629b51ac1ebc577b2e566b4', action_cost))
+    # print(orch_calc.get_action_cost_by_id(
+    #     ObjectId('661c43d66e85eda27393bf62'), action_cost))
+    # print(orch_calc.get_action_cost_by_name('split-action', action_cost))
