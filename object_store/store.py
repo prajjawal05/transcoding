@@ -1,4 +1,6 @@
+from collections import defaultdict, namedtuple
 import os
+from typing import Any
 import minio
 from pymongo import MongoClient, collection
 from bson import ObjectId
@@ -349,6 +351,8 @@ class ObjectStore:
             lifetime = None
             if get_time and put_time:
                 lifetime = get_time - put_time
+            if not get_time and not put_time:
+                continue
 
             result.append({
                 'object': object,
@@ -360,6 +364,47 @@ class ObjectStore:
             })
 
         return result
+
+    def get_putmetrics_for_action_across_orchs(self, orch_ids=[], action_ids=[]):
+        """
+        Fetches the size write for action and orchestration.
+
+        Parameters
+        ----------
+        orch_ids : str[]
+            Orchestration Ids for which metrics is required
+        action_ids : str[]
+            List of action_ids
+
+        Returns
+        -------
+        object
+            An object consisting of number object written and their size.
+
+        """
+        actions_info = self.db_collection.find({'_id': {'$in': action_ids}})
+        metrics = {}
+        for info in actions_info:
+            action_id = info['_id']
+            objects_put = info.get('objects_put', [])
+
+            for object_wrote in objects_put:
+                orch_id = object_wrote['orch_id']
+                if orch_ids and orch_id not in orch_ids:
+                    continue
+                object_name = object_wrote['object']
+
+                if orch_id not in metrics:
+                    metrics[orch_id] = {}
+                if action_id not in metrics[orch_id]:
+                    metrics[orch_id][action_id] = {}
+                metrics[orch_id][action_id][object_name] = {
+                    'object': object_name,
+                    'size': object_wrote['size'],
+                    'put_time': object_wrote['time']
+                }
+
+        return metrics
 
 
 class NoSuchKeyException(Exception):
@@ -394,11 +439,16 @@ if __name__ == '__main__':
     store = ObjectStore(config, [
         CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
 
-    store.get_sync({'action_id': '65da8be53a71e3870d6ee0ec'},
-                   CHUNKS_BUCKET_NAME, 'chunk_4_1708821475.mp4')
+    # store.get_sync({'action_id': '65da8be53a71e3870d6ee0ec'},
+    #                CHUNKS_BUCKET_NAME, 'chunk_4_1708821475.mp4')
 
     # store.get_sync({'action_id': '65bf234830192e6d4546c8fa'},
     #    INPUT_VIDEO_BUCKET, 'output_1707025224.mp4')
-    print(store.get_all_action_ids_for_objects(
-        ['output-chunks/chunk_4_1708821475.mp4']))
+    orch_ids = [ObjectId('662936a62ebaf5c853faf715'),
+                ObjectId('661c42df67a34ef406610e96')]
+    action_ids = [ObjectId('662936e52ebaf5c853faf71c'), ObjectId('661c42df67a34ef406610e97'), ObjectId(
+        '662936c72ebaf5c853faf718'), ObjectId('662936c72ebaf5c853faf71b')]
+    print(store.get_metrics_for_action_across_orchs(
+        orch_ids, action_ids
+    ))
     # store.get_action_ids_for_objects(['input-video/facebook.mp4'])
