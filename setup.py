@@ -5,3 +5,5 @@ setup(
     version='0.1',
     packages=find_packages(),
 )
+
+# cost(current) + cost(parent) - actual parent

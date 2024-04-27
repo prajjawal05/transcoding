@@ -1,5 +1,9 @@
 from bson import ObjectId
 from BaseOrchestrator import BaseOrchestrator
+from InterpolatedPredictor import InterpolatedPredictor
+
+from object_store import store
+from constants import MONGO_HOST, MONGO_PORT
 
 from typing import TypedDict, Union
 
@@ -38,6 +42,9 @@ auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
 class OrchestratorCalculator:
     def __init__(self) -> None:
         self.orch = BaseOrchestrator(auth)
+        self.predictor = InterpolatedPredictor()
+        self.store = store.ObjectStore(
+            db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
 
     def __get_orch_cost_details(self, orch_id: ObjectId) -> OrchDetails:
         """
@@ -233,6 +240,35 @@ class OrchestratorCalculator:
             'storageCost': storage_charge,
         }
 
+    def predict_action_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size):
+        def _get_objects_written():
+            action_id = self.orch.get_all_actions_for_id(action_name)[-1]
+            action_details = self.store.get_action_details(action_id)
+            return list(map(
+                lambda object_put: object_put['object'], action_details.get('objects_put', [])))
+
+        objects_written = _get_objects_written()
+
+        action_runtime = self.predictor.predict_runtime(
+            orch_name, action_name, input_size)
+
+        objects_cost_coefficient = 0
+        for object in objects_written:
+            lifetime = self.predictor.predict_lifetime(
+                orch_name, action_name, input_size, object)
+            size = self.predictor.predict_size(
+                orch_name, action_name, input_size, object)
+            objects_cost_coefficient += lifetime * size
+
+        compute_charge = cost['computeCharge'] * action_runtime
+        storage_charge = cost['objectChargePerSizePerDuration'] * \
+            objects_cost_coefficient
+
+        return {
+            'computeCost': compute_charge,
+            'storageCost': storage_charge,
+        }
+
 
 if __name__ == '__main__':
     orch_calc = OrchestratorCalculator()
@@ -248,8 +284,11 @@ if __name__ == '__main__':
     #  Action Cost
     action_cost = ActionCostParameters(
         computeCharge=1, objectChargePerSizePerDuration=2)
-    print(orch_calc.get_action_cost_by_id(
-        '6629b51ac1ebc577b2e566b4', action_cost))
+    # print(orch_calc.get_action_cost_by_id(
+    #     '6629b51ac1ebc577b2e566b4', action_cost))
     # print(orch_calc.get_action_cost_by_id(
     #     ObjectId('661c43d66e85eda27393bf62'), action_cost))
     # print(orch_calc.get_action_cost_by_name('split-action', action_cost))
+
+    orch_calc.predict_action_cost('video-transcoding', 'splitter', action_cost,
+                                  2389332)

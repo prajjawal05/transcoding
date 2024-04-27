@@ -432,6 +432,14 @@ class ObjectStore:
             {"objects_put.object": object, "objects_get.orch_id": orch_id})
         return result
 
+    def get_action_details(self, action_id):
+        if not isinstance(action_id, ObjectId):
+            action_id = ObjectId(action_id)
+
+        result = self.db_collection.find_one(
+            {"_id": action_id})
+        return result
+
 
 class NoSuchKeyException(Exception):
     def __init__(self, e):
