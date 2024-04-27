@@ -427,9 +427,9 @@ class ObjectStore:
 
         return metrics
 
-    def get_details_object_read(self, orch_id, object):
+    def get_details_object_write(self, orch_id, object):
         result = self.db_collection.find_one(
-            {"objects_get.object": object, "objects_get.orch_id": orch_id})
+            {"objects_put.object": object, "objects_get.orch_id": orch_id})
         return result
 
 
