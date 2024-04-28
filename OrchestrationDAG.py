@@ -1,6 +1,6 @@
 from bson import ObjectId
 from object_store import store
-from typing import TypedDict, Dict, Type, Set, Union
+from typing import TypedDict, Dict, Type, Set, Union, List
 from collections import deque
 
 from object_store import store
@@ -28,6 +28,17 @@ class OrchestrationDAG:
         self.store = store.ObjectStore(
             db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
         self.memograph: Dict[str, Node] = dict()
+
+    def get_node_prerequisite(self, action_id: ObjectId) -> List[ObjectId]:
+        if not self.memograph:
+            raise Exception('DAG not made')
+
+        if str(action_id) not in self.memograph:
+            raise Exception('Action not found in DAG')
+
+        prereqs = self.memograph[str(action_id)].children.keys()
+
+        return list(map(lambda action: ObjectId(action), prereqs))
 
     def construct_dag(self, orch_id: ObjectId) -> None:
         objects_involved: ObjectsInvolved = self.store.get_objects_involved(
@@ -72,14 +83,14 @@ class OrchestrationDAG:
             top: Union[Node, None] = q.popleft()
 
             if top is None:
-                print()
+                # print()
                 if len(q) == 0:
                     return
                 q.append(None)
                 continue
 
-            print(top.action_id,
-                  "write:", top.objects_written, "read:", top.objects_read, end=" -- ")
+            # print(top.action_id,
+            #       "write:", top.objects_written, "read:", top.objects_read, end=" -- ")
             for childnode in top.children.values():
                 if childnode in q:
                     continue

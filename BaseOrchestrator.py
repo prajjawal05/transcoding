@@ -705,7 +705,7 @@ class BaseOrchestrator:
 
         Returns
         -------
-        str[]
+        List[ObjectId]
             ids saved for the orchestration
 
         """
@@ -717,7 +717,7 @@ class BaseOrchestrator:
         return orch_ids
         # print(action_object_metrics['objects_used'])
 
-    def get_all_actions_for_id(self, action_name: str) -> List[ObjectId]:
+    def get_all_actions_for_id(self, action_name: str, orch_id: ObjectId = None) -> List[ObjectId]:
         """
         This returns all the action ids associated with the name
 
@@ -733,7 +733,10 @@ class BaseOrchestrator:
 
         """
         action_ids = []
-        results = self.db_collection.find({'action_name': action_name})
+        find_query = {'action_name': action_name}
+        if orch_id:
+            find_query['orch_id'] = orch_id
+        results = self.db_collection.find(find_query)
         for res in results:
             action_ids.append(res['_id'])
 
@@ -770,6 +773,7 @@ class BaseOrchestrator:
                 key = ActionOrchKey(action_id, orch_id)
                 action_orchestrator_runtime_map[key]['time'] += attempt['time']
                 action_orchestrator_runtime_map[key]['attempts'] += 1
+                action_orchestrator_runtime_map[key]['action_name'] = info['action_name']
 
         # if an action is run multiple times for an orchestrator
         # average would be taken
@@ -779,7 +783,8 @@ class BaseOrchestrator:
             if orch_id not in details_map:
                 details_map[orch_id] = {}
             details_map[orch_id][action_id] = {
-                'runtime': value['time']/value['attempts']
+                'runtime': value['time']/value['attempts'],
+                'action_name': value['action_name']
             }
 
         # fetches size of each object that was written by the action

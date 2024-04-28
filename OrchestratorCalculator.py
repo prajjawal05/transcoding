@@ -1,11 +1,11 @@
 from bson import ObjectId
+from collections import Counter
+from typing import List, TypedDict, Union
 from BaseOrchestrator import BaseOrchestrator
 from InterpolatedPredictor import InterpolatedPredictor
-
+from OrchestrationDAG import OrchestrationDAG
 from object_store import store
 from constants import MONGO_HOST, MONGO_PORT
-
-from typing import TypedDict, Union
 
 
 class OrchestrationCostParameters(TypedDict):
@@ -43,6 +43,7 @@ class OrchestratorCalculator:
     def __init__(self) -> None:
         self.orch = BaseOrchestrator(auth)
         self.predictor = InterpolatedPredictor()
+        self.dag = OrchestrationDAG()
         self.store = store.ObjectStore(
             db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
 
@@ -269,6 +270,35 @@ class OrchestratorCalculator:
             'storageCost': storage_charge,
         }
 
+    def predict_parent_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size):
+        orch_id = self.orch.get_all_orchs(orch_name)[-1]
+        action_id = self.orch.get_all_actions_for_id(action_name, orch_id)[-1]
+
+        self.dag.construct_dag(orch_id)
+        # print(action_id)
+        parents: List[ObjectId] = self.dag.get_node_prerequisite(action_id)
+        action_details = self.orch.get_action_details(parents, [orch_id])[
+            orch_id]
+        parent_cost = Counter()
+        cost_name_map = dict()
+        for detail in action_details.values():
+            action_name = detail['action_name']
+            if action_name not in cost_name_map:
+                cost_name_map[action_name] = self.predict_action_cost(
+                    orch_name, action_name, cost, input_size)
+            parent_cost += Counter(cost_name_map[action_name])
+
+        return dict(parent_cost)
+
+    def predict_rerunning_action_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size):
+        action_cost = self.predict_action_cost(
+            orch_name, action_name, cost, input_size)
+        parents_cost = self.predict_parent_cost(
+            orch_name, action_name, cost, input_size)
+
+        overall_cost = Counter(action_cost) + Counter(parents_cost)
+        return dict(overall_cost)
+
 
 if __name__ == '__main__':
     orch_calc = OrchestratorCalculator()
@@ -290,5 +320,5 @@ if __name__ == '__main__':
     #     ObjectId('661c43d66e85eda27393bf62'), action_cost))
     # print(orch_calc.get_action_cost_by_name('split-action', action_cost))
 
-    orch_calc.predict_action_cost('video-transcoding', 'splitter', action_cost,
-                                  2389332)
+    print(orch_calc.predict_parent_cost('video-transcoding', 'combiner', action_cost,
+                                        2389332))
