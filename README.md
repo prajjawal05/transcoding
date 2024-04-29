@@ -35,6 +35,10 @@ There is a file called `OrchestratorCalculator.py`. It has a function which comp
 
 There is a file called `InterpolatedPredictor.py`. It predicts the action runtime, object size and lifetime using linear interpolation.
 
+#### Orchestration DAG
+
+There is a file called `OrchestrationDAG.py`. It creates a DAG (from object reader to object writer) for an orchestration ID and provides a few functionalities revolving around DAG.
+
 #### Constants
 
 `constants.py` has the details related to hosts and port used for document storage and object storage layer as well as any access keys if present.
