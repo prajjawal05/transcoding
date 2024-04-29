@@ -10,6 +10,24 @@ auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
 
 
 def reorder_arrays(X, Y):
+    """
+        This function rearranges X and Y in a way that X is sorted in an increasing order and 
+        the pair {X[i], Y[i]} remains the same after the sort. 
+
+        Parameters
+        ----------
+        X : List[Any]
+            Primary list
+
+        Y : List[Any]
+            Secondary list
+
+        Returns
+        -------
+        List[Any], List[Any]
+            Inputs but in sorted order
+
+    """
     index_mapping = sorted(range(len(X)), key=lambda i: X[i])
     X_sorted = [X[i] for i in index_mapping]
     Y_sorted = [Y[i] for i in index_mapping]
@@ -22,12 +40,49 @@ class InterpolatedPredictor:
         self.orch = BaseOrchestrator(auth)
 
     def __fetch_all_details(self, orch_name, action_name):
+        """
+        This function gets action runtime details and the object details for each action and orch.
+
+        Parameters
+        ----------
+        orch_name : str
+            Name of the orchestrator
+
+        action_name : str
+            Name of the action
+
+        Returns
+        -------
+        dict[ObjectId, dict[ObjectId, dict]]
+            Inputs but in sorted order
+
+        """
         orch_ids = self.orch.get_all_orchs(orch_name)
         action_ids = self.orch.get_all_actions_for_id(action_name)
         details = self.orch.get_action_details(action_ids, orch_ids)
         return details
 
     def predict_runtime(self, orch_name, action_name, input_size=0):
+        """
+        This function predicts the runtime of an action within an orch for different input size using interpolation.
+
+        Parameters
+        ----------
+        orch_name : str
+            Name of the orchestrator
+
+        action_name : str
+            Name of the action
+
+        input_size : int
+            Size of the input to the orchestration
+
+        Returns
+        -------
+        float
+            The predicted runtime
+
+        """
         details = self.__fetch_all_details(orch_name, action_name)
         input_size_X = []
         runtime_Y = []
@@ -43,6 +98,30 @@ class InterpolatedPredictor:
         return predicted_runtime
 
     def predict_size(self, orch_name, action_name, input_size, object_name=''):
+        """
+        This function predicts the size of a particular object created by an action within an orch 
+        for different input size using interpolation.
+
+        Parameters
+        ----------
+        orch_name : str
+            Name of the orchestrator
+
+        action_name : str
+            Name of the action
+
+        input_size : int
+            Size of the input to the orchestration
+
+        object_name: str
+            Object to predict the size for
+
+        Returns
+        -------
+        float
+            The predicted size
+
+        """
         details = self.__fetch_all_details(orch_name, action_name)
         input_size_X = []
         object_size_Y = []
@@ -61,6 +140,30 @@ class InterpolatedPredictor:
         return predicted_size
 
     def predict_lifetime(self, orch_name, action_name, input_size, object_name=''):
+        """
+        This function predicts the size of a particular object created by an action within an orch 
+        for different input size using interpolation.
+
+        Parameters
+        ----------
+        orch_name : str
+            Name of the orchestrator
+
+        action_name : str
+            Name of the action
+
+        input_size : int
+            Size of the input to the orchestration
+
+        object_name: str
+            Object to predict the size for
+
+        Returns
+        -------
+        float
+            The predicted size
+
+        """
         details = self.__fetch_all_details(orch_name, action_name)
         input_size_X = []
         object_lifetime_Y = []

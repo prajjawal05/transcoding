@@ -31,6 +31,10 @@ There is a file called `BaseOrchestrator.py`. Application owners who want to wri
 
 There is a file called `OrchestratorCalculator.py`. It has a function which compares the compute charge and storage charge and returns which option should be preferred for saving cost.
 
+#### Interpolated Predictor
+
+There is a file called `InterpolatedPredictor.py`. It predicts the action runtime, object size and lifetime using linear interpolation.
+
 #### Constants
 
 `constants.py` has the details related to hosts and port used for document storage and object storage layer as well as any access keys if present.
