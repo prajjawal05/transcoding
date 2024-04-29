@@ -36,6 +36,10 @@ def reorder_arrays(X, Y):
 
 
 class InterpolatedPredictor:
+    """
+    This class has a couple of functions used to predict things using the existing data stored in mongoDB
+    """
+
     def __init__(self) -> None:
         self.orch = BaseOrchestrator(auth)
 
