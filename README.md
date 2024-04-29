@@ -29,7 +29,7 @@ There is a file called `BaseOrchestrator.py`. Application owners who want to wri
 
 #### Orchestrator Calculator
 
-There is a file called `OrchestratorCalculator.py`. It has a function which compares the compute charge and storage charge and returns which option should be preferred for saving cost.
+There is a file called `OrchestratorCalculator.py`. This class provides different functions which helps calculate or predict the storage cost and compute cost for different orchestrations or actions.
 
 #### Interpolated Predictor
 

@@ -40,6 +40,11 @@ auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
 
 
 class OrchestratorCalculator:
+    """
+    This class provides different functions which helps calculate or predict the storage cost 
+    and compute cost for different orchestrations or actions.
+    """
+
     def __init__(self) -> None:
         self.orch = BaseOrchestrator(auth)
         self.predictor = InterpolatedPredictor()
@@ -241,7 +246,28 @@ class OrchestratorCalculator:
             'storageCost': storage_charge,
         }
 
-    def predict_action_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size):
+    def predict_action_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size: int) -> Cost:
+        """
+        This function predicts the compute cost and storage cost for running an action on the basis
+        of input_size.
+
+        Parameters
+        ----------
+        action_id : Union[int, ObjectId]
+            ID of action which is considered
+
+        cost: ActionCostParameters
+            the various parameters used in cost calculation
+
+        input_size: int
+            size of the input to the orchestrator to be used for prediction
+
+        Returns
+        -------
+        Cost
+            returns the predicted cost of running the action
+
+        """
         def _get_objects_written():
             action_id = self.orch.get_all_actions_for_id(action_name)[-1]
             action_details = self.store.get_action_details(action_id)
@@ -270,7 +296,28 @@ class OrchestratorCalculator:
             'storageCost': storage_charge,
         }
 
-    def predict_parent_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size):
+    def predict_parent_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size) -> Cost:
+        """
+        This function predicts the compute cost and storage cost for running the parents of an
+        action on the basis of input_size.
+
+        Parameters
+        ----------
+        action_id : Union[int, ObjectId]
+            ID of action which is considered
+
+        cost: ActionCostParameters
+            the various parameters used in cost calculation
+
+        input_size: int
+            size of the input to the orchestrator to be used for prediction
+
+        Returns
+        -------
+        Cost
+            returns the predicted cost of running the parents of an action
+
+        """
         orch_id = self.orch.get_all_orchs(orch_name)[-1]
         action_id = self.orch.get_all_actions_for_id(action_name, orch_id)[-1]
 
@@ -291,6 +338,27 @@ class OrchestratorCalculator:
         return dict(parent_cost)
 
     def predict_rerunning_action_cost(self, orch_name, action_name, cost: ActionCostParameters, input_size):
+        """
+        This function predicts the compute cost and storage cost for running the action as well as 
+        parents of an action on the basis of input_size.
+
+        Parameters
+        ----------
+        action_id : Union[int, ObjectId]
+            ID of action which is considered
+
+        cost: ActionCostParameters
+            the various parameters used in cost calculation
+
+        input_size: int
+            size of the input to the orchestrator to be used for prediction
+
+        Returns
+        -------
+        Cost
+            returns the predicted cost of running the actopm as well as parents of that action
+
+        """
         action_cost = self.predict_action_cost(
             orch_name, action_name, cost, input_size)
         parents_cost = self.predict_parent_cost(
