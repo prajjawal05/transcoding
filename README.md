@@ -37,7 +37,7 @@ There is a file called `InterpolatedPredictor.py`. It predicts the action runtim
 
 #### Orchestration DAG
 
-There is a file called `OrchestrationDAG.py`. It creates a DAG (from object reader to object writer) for an orchestration ID and provides a few functionalities revolving around DAG.
+There is a file called `OrchestrationDAG.py`. It creates a DAG (from object reader to object writer) for an orchestration ID and provides few functionalities revolving around DAG.
 
 #### Constants
 
