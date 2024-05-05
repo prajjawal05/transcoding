@@ -4,3 +4,6 @@ dist/
 *.log
 *.zip
 .DS_Store
+.vscode
+__pycache__
+build/

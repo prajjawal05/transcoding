@@ -10,7 +10,7 @@ from collections import defaultdict, namedtuple
 
 from typing import List
 
-from object_store import store
+from ..storage import store
 from constants import MONGO_HOST, MONGO_PORT
 
 
@@ -273,7 +273,7 @@ class BaseOrchestrator:
         action_key_map : dict[]
             The dict is of action_id and the key that was responsible.
 
-        retries: number
+        retries: number/obje
             Number of retries for the parent
 
         parallelisation: number

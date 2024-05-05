@@ -4,7 +4,7 @@ from typing import List, TypedDict, Union
 from BaseOrchestrator import BaseOrchestrator
 from InterpolatedPredictor import InterpolatedPredictor
 from OrchestrationDAG import OrchestrationDAG
-from object_store import store
+from ..storage import store
 from constants import MONGO_HOST, MONGO_PORT
 
 

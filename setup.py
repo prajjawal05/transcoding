@@ -1,9 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='object_store',
+    name='orchestration',
     version='0.1',
     packages=find_packages(),
 )
-
-# cost(current) + cost(parent) - actual parent
