@@ -4,20 +4,33 @@ from typing import Any
 import minio
 from pymongo import MongoClient, collection
 from bson import ObjectId
+import configparser
 
 from datetime import datetime
 
 client = None
 
+DEFAULT_CONFIG_FILE='/etc/orchestration/config.ini'
 
-def get_mongo_client(config):
+def get_default_config():
+    assert os.path.exists(DEFAULT_CONFIG_FILE), f'Config file {DEFAULT_CONFIG_FILE} missing'
+    c = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    c.read(DEFAULT_CONFIG_FILE)
+    return c
+
+def get_mongo_client(config=None):
     global client
 
     if client is not None:
         return client
 
-    MONGO_HOST = config.get('MONGO_HOST')
-    MONGO_PORT = config.get('MONGO_PORT')
+    if config is None:
+        c = get_default_config()
+        MONGO_HOST = c.get('mongo', 'host')
+        MONGO_PORT = c.getint('mongo', 'port')
+    else:
+        MONGO_HOST = config.get('MONGO_HOST')
+        MONGO_PORT = config.get('MONGO_PORT')
 
     print('Using Mongo host: {}'.format(MONGO_HOST))
 
@@ -34,9 +47,9 @@ class ObjectStore:
     access_key = None
     secret_key = None
 
-    def __init__(self, config={}, buckets=[], db_config={}):
+    def __init__(self, buckets=[], config = None, db_config=None):
         """
-        Initialises object store
+        Initializes object store
 
         Parameters
         ----------
@@ -51,11 +64,16 @@ class ObjectStore:
         None
 
         """
-        self.endpoint = config.get("STORAGE_ENDPOINT")
-        self.access_key = config.get("AWS_ACCESS_KEY_ID")
-        self.secret_key = config.get("AWS_SECRET_ACCESS_KEY")
-        self.db_collection: collection.Collection = get_mongo_client(db_config)[
-            'openwhisk']['action_store']
+        if config is None:
+            c = get_default_config()
+            self.endpoint = c['minio']['endpoint']
+            self.access_key = c['minio']['aws_access_key_id']
+            self.secret_key = c['minio']['aws_secret_access_key']
+        else:
+            self.endpoint = config.get("STORAGE_ENDPOINT")
+            self.access_key = config.get("AWS_ACCESS_KEY_ID")
+            self.secret_key = config.get("AWS_SECRET_ACCESS_KEY")
+        self.db_collection: collection.Collection = get_mongo_client(db_config)['openwhisk']['action_store']
 
         if not self.endpoint:
             return
@@ -452,37 +470,3 @@ class NoSuchKeyException(Exception):
 
     def __str__(self) -> str:
         return str(self.original_exception)
-
-
-if __name__ == '__main__':
-    STORAGE_ENDPOINT = "172.24.20.28:9000"
-    AWS_ACCESS_KEY_ID = "minioadmin"
-    AWS_SECRET_ACCESS_KEY = "minioadmin"
-
-    config = dict(
-        STORAGE_ENDPOINT=STORAGE_ENDPOINT,
-        AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID,
-        AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY
-    )
-
-    CHUNKS_BUCKET_NAME = 'output-chunks'
-    TRANSCODED_CHUNKS_NAME = 'transcoded-chunks'
-    PROCESSED_VIDEO_BUCKET = 'processed-video'
-    INPUT_VIDEO_BUCKET = 'input-video'
-
-    store = ObjectStore(config, [
-        CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
-
-    # store.get_sync({'action_id': '65da8be53a71e3870d6ee0ec'},
-    #                CHUNKS_BUCKET_NAME, 'chunk_4_1708821475.mp4')
-
-    # store.get_sync({'action_id': '65bf234830192e6d4546c8fa'},
-    #    INPUT_VIDEO_BUCKET, 'output_1707025224.mp4')
-    orch_ids = [ObjectId('662936a62ebaf5c853faf715'),
-                ObjectId('661c42df67a34ef406610e96')]
-    action_ids = [ObjectId('662936e52ebaf5c853faf71c'), ObjectId('661c42df67a34ef406610e97'), ObjectId(
-        '662936c72ebaf5c853faf718'), ObjectId('662936c72ebaf5c853faf71b')]
-    print(store.get_metrics_for_action_across_orchs(
-        orch_ids, action_ids
-    ))
-    # store.get_action_ids_for_objects(['input-video/facebook.mp4'])

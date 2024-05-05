@@ -5,8 +5,6 @@ from BaseOrchestrator import BaseOrchestrator
 from InterpolatedPredictor import InterpolatedPredictor
 from OrchestrationDAG import OrchestrationDAG
 from ..storage import store
-from constants import MONGO_HOST, MONGO_PORT
-
 
 class OrchestrationCostParameters(TypedDict):
     computeCharge: int
@@ -49,8 +47,7 @@ class OrchestratorCalculator:
         self.orch = BaseOrchestrator(auth)
         self.predictor = InterpolatedPredictor()
         self.dag = OrchestrationDAG()
-        self.store = store.ObjectStore(
-            db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
+        self.store = store.ObjectStore()
 
     def __get_orch_cost_details(self, orch_id: ObjectId) -> OrchDetails:
         """

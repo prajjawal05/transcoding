@@ -3,7 +3,6 @@ from typing import TypedDict, Dict, Type, Set, Union, List
 from collections import deque
 
 from ..storage import store
-from constants import MONGO_HOST, MONGO_PORT
 
 auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
         "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
@@ -28,8 +27,7 @@ class OrchestrationDAG:
     """
 
     def __init__(self) -> None:
-        self.store = store.ObjectStore(
-            db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
+        self.store = store.ObjectStore()
         self.memograph: Dict[str, Node] = dict()
 
     def get_node_prerequisite(self, action_id: ObjectId) -> List[ObjectId]:

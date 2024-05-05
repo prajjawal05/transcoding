@@ -1,16 +1,13 @@
 import asyncio
-from BaseOrchestrator import BaseOrchestrator
-
+from orchestration.orchestrator import BaseOrchestrator
 
 auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
         "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
-orch = BaseOrchestrator(auth)
-
+orch = BaseOrchestrator.BaseOrchestrator(auth)
 
 action_name_1 = 'sampleaction1'
 action_name_2 = 'sampleaction2'
 action_name_3 = 'sampleaction3'
-
 
 async def run_single_action(action_name, params):
     '''

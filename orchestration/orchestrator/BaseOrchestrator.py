@@ -5,18 +5,14 @@ import logging
 
 from datetime import datetime
 from bson import ObjectId
-from pymongo import MongoClient, collection, UpdateOne
+from pymongo import collection, UpdateOne
 from collections import defaultdict, namedtuple
 
 from typing import List
 
 from ..storage import store
-from constants import MONGO_HOST, MONGO_PORT
-
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-client = MongoClient(MONGO_HOST, MONGO_PORT)
-
 
 def get_logger(name):
     logger = logging.getLogger(name)
@@ -30,22 +26,24 @@ def get_logger(name):
 
     return logger
 
-
 class BaseOrchestrator:
     def __init__(self, auth) -> None:
+        global client
+
         self.auth = auth
         self.url = "https://localhost:31001/api/v1/namespaces"
         self.logger = get_logger('transcoder')
-        self.store = store.ObjectStore(
-            db_config={'MONGO_HOST': MONGO_HOST, 'MONGO_PORT': MONGO_PORT})
+        self.store = store.ObjectStore()
         self.orch_id = None
         self.actions_ids = set()
+
+        client = store.get_mongo_client()
         self.orch_collection: collection.Collection = client['openwhisk']['orchestrations']
         self.db_collection: collection.Collection = client['openwhisk']['actions']
 
     def start(self, name: str):
         """
-        Creates an orhcestration id for associating to every action that is made.
+        Creates an orchestration id for associating to every action that is made.
         """
         self.orch_id = self.orch_collection.insert_one({
             'name': name,
