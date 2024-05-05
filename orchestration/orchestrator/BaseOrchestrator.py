@@ -658,13 +658,17 @@ class BaseOrchestrator:
                     'size_written': object['put_size'],
                 })
 
+        if input_object is None:
+            input_size = 0
+        else:
+            input_size = input_object.get('get_size', 0)
         self.orch_collection.update_one(
             {'_id': self.orch_id}, {'$set': {
                 'finish_ts': orch_finish_ts,
                 'time_taken': self.time_taken,
                 'action_time_taken': self.action_time_taken,
                 'object_metrics': output_object_metrics,
-                'input_size': input_object.get('get_size', 0)
+                'input_size': input_size
             }})
 
     def get_orch_details(self, orch_id):
