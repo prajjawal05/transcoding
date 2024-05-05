@@ -1,5 +1,12 @@
 ## Setting Up
 
+Install prerequisites:
+apt install -y docker.io
+https://kind.sigs.k8s.io/docs/user/quick-start/
+https://helm.sh/docs/intro/install/
+https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/
+https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+
 ### Local Setup
 
 If you are using an existing action, following are the steps that will be required:
