@@ -1,0 +1,3 @@
+orchestration-0.1.tar.gz
+minio==7.1.8
+pymongo[srv]

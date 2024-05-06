@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TAG="${TAG:-docker.io/alexmerenstein/transcode:latest}"
+TAG="${TAG:-docker.io/alexmerenstein/orchaction:latest}"
 
 mkdir -p build
 
