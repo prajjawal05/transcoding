@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mongo-pod
+  labels:
+    app: mongodb
+spec:
+  containers:
+  - name: test
+    image: mongo
+    command: ["bash", "-c", "mkdir -p /var/lib/mongodb; mongod --port 8888 --dbpath /var/lib/mongodb/ --bind_ip 0.0.0.0"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8888
+    protocol: TCP
+    targetPort: 8888
+  selector:
+    app: mongodb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc-external
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8888
+    protocol: TCP
+    targetPort: 8888
+    nodePort: 30001
+  selector:
+    app: mongodb
+  sessionAffinity: None
+  type: NodePort
