@@ -13,9 +13,12 @@ client = None
 DEFAULT_CONFIG_FILE='/etc/orchestration/config.ini'
 
 def get_default_config():
-    assert os.path.exists(DEFAULT_CONFIG_FILE), f'Config file {DEFAULT_CONFIG_FILE} missing'
     c = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
-    c.read(DEFAULT_CONFIG_FILE)
+    if os.path.exists('config.ini'):
+        c.read('config.ini')
+    else:
+        assert os.path.exists(DEFAULT_CONFIG_FILE), f'Config file {DEFAULT_CONFIG_FILE} missing'
+        c.read(DEFAULT_CONFIG_FILE)
     return c
 
 def get_mongo_client(config=None):
@@ -92,7 +95,7 @@ class ObjectStore:
                     if error.code == "BucketAlreadyOwnedByYou":
                         continue
                     raise error
-            print('Initialised Minio client')
+            print('Initialized Minio client')
         except Exception as e:
             print('Some issue with minio client: ' + e)
 

@@ -1,38 +1,26 @@
-from object_store import store
+from orchestration.storage import store as objstore
 import ffmpeg
 
 from enum import Enum
 from datetime import datetime
-from constants import MONGO_HOST, MONGO_PORT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, MINIO_ENDPOINT
-
-config = dict(STORAGE_ENDPOINT=MINIO_ENDPOINT,
-              AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY)
 
 CHUNKS_BUCKET_NAME = 'output-chunks'
 TRANSCODED_CHUNKS_NAME = 'transcoded-chunks'
 PROCESSED_VIDEO_BUCKET = 'processed-video'
 INPUT_VIDEO_BUCKET = 'input-video'
 
-
 # passing config and the buckets that I want to create.
-store = store.ObjectStore(config,
-                          [CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME,
-                              PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET],
-                          db_config={'MONGO_HOST': MONGO_HOST,
-                                     'MONGO_PORT': MONGO_PORT}
-                          )
-
+store = objstore.ObjectStore([CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME,
+                           PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
 
 def get_epoch():
     return int(datetime.utcnow().timestamp())
-
 
 class Resolution(Enum):
     _360p = "360p"
     _480p = "480p"
     _720p = "720p"
     _1080p = "1080p"
-
 
 resolution_scale = {
     Resolution._360p.name: '480:360',
@@ -41,12 +29,10 @@ resolution_scale = {
     Resolution._1080p.name: '1920:1080'
 }
 
-
 def get_video_duration(filename):
     probe = ffmpeg.probe(filename, v='error',
                          select_streams='v:0', show_entries='stream=duration')
     return float(probe['streams'][0]['duration'])
-
 
 class AudioVideo:
     @staticmethod

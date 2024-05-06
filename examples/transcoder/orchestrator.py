@@ -1,12 +1,10 @@
 import asyncio
-from object_store import store
-from BaseOrchestrator import BaseOrchestrator
-from constants import MINIO_ENDPOINT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-
+from orchestration.storage import store as objstore
+from orchestration.orchestrator import BaseOrchestrator
 
 auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
         "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
-orch = BaseOrchestrator(auth)
+orch = BaseOrchestrator.BaseOrchestrator(auth)
 action_name = 'transcoder'
 
 CHUNKS_BUCKET_NAME = 'output-chunks'
@@ -14,17 +12,9 @@ TRANSCODED_CHUNKS_NAME = 'transcoded-chunks'
 PROCESSED_VIDEO_BUCKET = 'processed-video'
 INPUT_VIDEO_BUCKET = 'input-video'
 
-
 def get_store():
-    config = dict(
-        STORAGE_ENDPOINT=MINIO_ENDPOINT,
-        AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID,
-        AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY
-    )
-
-    return store.ObjectStore(config, [
-        CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
-
+    return objstore.ObjectStore([CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, 
+                                PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
 
 async def main():
     num_chunks = 5
@@ -68,7 +58,7 @@ async def main():
             raise Exception('Some transcoding Unsuccessful')
 
     # shows the retry feature, in case of NoSuchKeyException
-    store.remove_object({}, TRANSCODED_CHUNKS_NAME, chunks[0])
+    #store.remove_object({}, TRANSCODED_CHUNKS_NAME, chunks[0])
 
     print("** Combining **")
     params = {
@@ -87,10 +77,5 @@ async def main():
     # you need to call stop function
     orch.stop()
 
-
 if __name__ == "__main__":
     asyncio.run(main())
-    # poller(['22b0335cebae4d4fb0335cebaefd4fff'])
-
-
-# curl  -X POST  -u 23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP --insecure https://localhost:31001/api/v1/namespaces/guest/actions/transcode
