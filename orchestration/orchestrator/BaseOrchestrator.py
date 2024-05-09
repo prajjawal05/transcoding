@@ -32,8 +32,7 @@ class BaseOrchestrator:
 
         self.auth = auth
         self.url = "https://localhost:31001/api/v1/namespaces"
-        self.logger = get_logger('transcoder')
-        self.store = store.ObjectStore()
+        self.logger = get_logger('orchestrator')
         self.orch_id = None
         self.actions_ids = set()
 
@@ -51,6 +50,8 @@ class BaseOrchestrator:
         }).inserted_id
         self.orch_start = datetime.utcnow()
         print(f"Orchestration {self.orch_id} started")
+        
+        self.store = store.ObjectStore(dict(context = dict(action_id = None, orch_id = self.orch_id)))
 
     def __get_call(self, api_url):
         """
@@ -166,7 +167,6 @@ class BaseOrchestrator:
                     continue
 
                 result = responseData.get('response').get('result')
-                print(result)
                 time_taken = datetime.utcnow(
                 ) - self.start_times[activation_id]
                 update_changes = {
@@ -174,17 +174,20 @@ class BaseOrchestrator:
                 }
                 self.db_collection.update_one(
                     {'_id': action_id}, update_changes)
+
+                self.logger.info(f'[{action_id}] Output from {activation_id}:')
+                for l in responseData.get('logs', []):
+                    self.logger.info(f'\t{l}')
+
                 if result.get('error', None) is not None:
-                    self.logger.info(
-                        "[{}] Poll completed with error for: {} in: {}".format(action_id, activation_id, time_taken))
+                    self.logger.info(f'[{action_id}] Poll completed with error for: {activation_id} in: {time_taken}')
                     results[index] = {
                         'success': False,
                         'error': result.get('error'),
                         'action_id': action_id,
                     }
                 else:
-                    self.logger.info(
-                        "[{}] Poll completed for: {} in: {}".format(action_id, activation_id, time_taken))
+                    self.logger.info(f'[{action_id}] Poll completed for: {activation_id} in: {time_taken}')
                     results[index] = {
                         'success': True,
                         'result': result,
@@ -453,7 +456,8 @@ class BaseOrchestrator:
                     action_results.append({
                         'error': error,
                         'success': False,
-                        'action_id': res['action_id']
+                        'action_id': res['action_id'],
+                        'logs': res.get('logs', [])
                     })
                     results[original_index] = res
                     # if no such key need to retry in a different way by adding it to object_issues list
@@ -600,7 +604,7 @@ class BaseOrchestrator:
         for i, info in enumerate(actions_info):
             action_id = info['_id']
             print()
-            print(f"Action {i+1}:")
+            print(f"Action {i+1} ({action_id}):")
             print(f"Name - {info['action_name']}")
             print(f"Body - {str(info['action_params'])}")
             attempts = list(

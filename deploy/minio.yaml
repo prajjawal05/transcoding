@@ -8,12 +8,13 @@ metadata:
 spec:
   containers:
   - name: minio
-    image: quay.io/minio/minio:latest
-    command:
-    - /bin/bash
-    - -c
-    args: 
-    - minio server /data --console-address :9001
+    image: docker.io/alexmerenstein/minio:0.0.1
+    command: ["/bin/bash", "-c", "minio server /data"]
+    env:
+      - name: MINIO_ACCESS_KEY
+        value: minioadmin
+      - name: MINIO_SECRET_KEY
+        value: minioadmin
     volumeMounts:
     - mountPath: /data
       name: localvolume

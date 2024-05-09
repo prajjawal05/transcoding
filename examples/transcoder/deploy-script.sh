@@ -1,6 +1,14 @@
 #!/bin/bash
 
-# Move the zip file back to the original directory if needed
-wsk action create splitter actions.py --docker docker.io/alexmerenstein/transcoder:latest --insecure
-wsk action create transcoder actions.py --docker docker.io/alexmerenstein/transcoder:latest --insecure
-wsk action create combiner actions.py --docker docker.io/alexmerenstein/transcoder:latest --insecure
+pushd "$(dirname "$0")"
+
+ACTION_TAG="${ACTION_TAG:-docker.io/alexmerenstein/transcode:latest}"
+
+docker build . -t ${ACTION_TAG}
+docker push ${ACTION_TAG}
+
+wsk action update split split.py --docker ${ACTION_TAG} --insecure
+wsk action update transcode transcode.py --docker ${ACTION_TAG} --insecure
+wsk action update combine concat.py --docker ${ACTION_TAG} --insecure
+
+popd

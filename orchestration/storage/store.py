@@ -50,7 +50,7 @@ class ObjectStore:
     access_key = None
     secret_key = None
 
-    def __init__(self, buckets=[], config = None, db_config=None):
+    def __init__(self, args, config = None, db_config = None):
         """
         Initializes object store
 
@@ -67,6 +67,8 @@ class ObjectStore:
         None
 
         """
+        self.db_collection: collection.Collection = get_mongo_client(db_config)['openwhisk']['action_store']
+
         if config is None:
             c = get_default_config()
             self.endpoint = c['minio']['endpoint']
@@ -76,37 +78,30 @@ class ObjectStore:
             self.endpoint = config.get("STORAGE_ENDPOINT")
             self.access_key = config.get("AWS_ACCESS_KEY_ID")
             self.secret_key = config.get("AWS_SECRET_ACCESS_KEY")
-        self.db_collection: collection.Collection = get_mongo_client(db_config)['openwhisk']['action_store']
 
-        if not self.endpoint:
-            return
-        print('Initialising Minio client')
+        assert self.endpoint is not None, f'Got empty endpoint: {config}'
 
-        for bucket in buckets:
-            os.makedirs(bucket, exist_ok=True)
+        print('Initializing Minio client')
+
         try:
             self.client = minio.Minio(
                 self.endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=False)
-            for bucket in buckets:
-                try:
-                    self.client.make_bucket(bucket)
-                    print(f"Created bucket: {bucket}")
-                except Exception as error:
-                    if error.code == "BucketAlreadyOwnedByYou":
-                        continue
-                    raise error
             print('Initialized Minio client')
         except Exception as e:
             print('Some issue with minio client: ' + e)
 
-    def __mark_object(self, context, object_path, object_size, method):
-        action_id = ObjectId(context['action_id'])
-        orch_id = ObjectId(context['orch_id'])
+        context = args['context']
+        self.orch_id = ObjectId(context.get('orch_id', None))
+        self.action_id = ObjectId(context.get('action_id', None))
+        print(f'Initialized store for action ID: {self.action_id} orch ID: {self.orch_id}')
+
+    def __mark_object(self, object_path, object_size, method):
+        print(method, object_path, object_size, self.action_id, self.orch_id)
         update_changes = {
-            '$set': {**context},
+            '$set': dict(action_id = self.action_id, orch_id = self.orch_id),
             '$push': {
                 f"objects_{method}": {
-                    'orch_id': orch_id,
+                    'orch_id': self.orch_id,
                     'object': object_path,
                     'size': object_size,
                     'time': datetime.utcnow()
@@ -114,31 +109,37 @@ class ObjectStore:
             }
         }
         self.db_collection.update_one(
-            {'_id': action_id},
+            {'_id': self.action_id},
             update_changes,
             upsert=True
         )
 
-    def __mark_error_get(self, context, object_path):
-        action_id = ObjectId(context['action_id'])
-        orch_id = ObjectId(context['orch_id'])
+    def __mark_error_get(self, object_path):
         update_changes = {
-            '$set': {**context},
+            '$set': dict(action_id = self.action_id, orch_id = self.orch_id),
             '$push': {
                 'error_get': {
-                    'orch_id': orch_id,
+                    'orch_id': self.orch_id,
                     'object': object_path,
                     'time': datetime.utcnow()
                 }
             }
         }
         self.db_collection.update_one(
-            {'_id': action_id},
+            {'_id': self.action_id},
             update_changes,
             upsert=True
         )
 
-    def put_sync(self, context, bucket, file_name):
+    def create_bucket(self, bucket):
+        try:
+            self.client.make_bucket(bucket)
+            print(f"Created bucket: {bucket}")
+        except Exception as error:
+            if error.code != "BucketAlreadyOwnedByYou":
+                raise error
+
+    def put_sync(self, bucket, object_name, file_name, mark=True):
         """
         From the "bucket/file_name" directory, puts the object into bucket and file.
 
@@ -157,12 +158,13 @@ class ObjectStore:
         """
         if not self.client:
             return
-        object_path = f"{bucket}/{file_name}"
-        self.client.fput_object(bucket, file_name, object_path)
-        self.__mark_object(context, object_path,
-                           os.path.getsize(object_path), 'put')
+        object_path = f'{bucket}/{object_name}'
+        print('PUT', bucket, object_name, file_name)
+        self.client.fput_object(bucket, object_name, file_name)
+        if mark:
+            self.__mark_object(object_path, os.path.getsize(file_name), 'put')
 
-    def get_sync(self, context, bucket, file_name):
+    def get_sync(self, bucket, object_name, file_name):
         """
         From the bucket and file, puts the object into "bucket/file_name"
 
@@ -181,21 +183,21 @@ class ObjectStore:
         """
         if not self.client:
             return
-        object_path = f"{bucket}/{file_name}"
+        object_path = f'{bucket}/{object_name}'
+        print('GET', bucket, object_name, file_name)
         try:
-            object = self.client.fget_object(bucket, file_name, object_path)
-            self.__mark_object(context, object_path, object.size, 'get')
+            object = self.client.fget_object(bucket, object_name, file_name)
+            self.__mark_object(object_path, object.size, 'get')
         except Exception as e:
-            self.__mark_error_get(context, object_path)
+            self.__mark_error_get(object_path)
             if e.code == 'NoSuchKey':
                 raise NoSuchKeyException(e)
             raise e
 
-    def remove_object(self, context, bucket, file_name):
+    def remove_object(self, bucket, object_name):
         if not self.client:
             return
-        # object_path = f"{bucket}/{file_name}"
-        self.client.remove_object(bucket, file_name)
+        self.client.remove_object(bucket, object_name)
 
     def get_action_ids_for_objects(self, keys):
         """

@@ -1,3 +1,5 @@
+import os
+import argparse
 import asyncio
 from orchestration.storage import store as objstore
 from orchestration.orchestrator import BaseOrchestrator
@@ -5,34 +7,26 @@ from orchestration.orchestrator import BaseOrchestrator
 auth = ("23bc46b1-71f6-4ed5-8c54-816aa4f8c502",
         "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
 orch = BaseOrchestrator.BaseOrchestrator(auth)
-action_name = 'transcoder'
 
 CHUNKS_BUCKET_NAME = 'output-chunks'
 TRANSCODED_CHUNKS_NAME = 'transcoded-chunks'
 PROCESSED_VIDEO_BUCKET = 'processed-video'
 INPUT_VIDEO_BUCKET = 'input-video'
 
-def get_store():
-    return objstore.ObjectStore([CHUNKS_BUCKET_NAME, TRANSCODED_CHUNKS_NAME, 
-                                PROCESSED_VIDEO_BUCKET, INPUT_VIDEO_BUCKET])
 
-async def main():
-    num_chunks = 5
+async def main(input_video):
+    num_chunks = 1
     transcoding_parallelisation = 2
-    store = get_store()
 
     # you need to call start function
     orch.start('video-transcoding')
+    
+    video_name = os.path.basename(input_video)
+    orch.store.put_sync(INPUT_VIDEO_BUCKET, video_name, input_video, mark=False)
 
     print("** Chunking **")
-    params = {
-        "type": "chunk",
-        "num_chunks": num_chunks,
-        "input": "facebook.mp4"
-    }
-
-    split_action = orch.prepare_action('splitter', params)
-    split_results = (await orch.make_action([split_action]))[0]
+    split_action = orch.prepare_action('split', dict(num_chunks = num_chunks, input = video_name))
+    split_results = (await orch.make_action([split_action], retries=0))[0]
     if not split_results['success']:
         raise Exception('Error splitting in chunks')
 
@@ -42,17 +36,10 @@ async def main():
 
     transcoding_actions = []
     for i, chunk in enumerate(chunks):
-        params = {
-            "type": "transcode",
-            "input": chunk,
-            "resolution": "360p"
-        }
-        # if i % 2 == 0:
-        #     params["type"] = "transcodes"
         transcoding_actions.append(
-            orch.prepare_action(action_name, params))
+            orch.prepare_action('transcode', dict(input = chunk, resolution = '360p')))
 
-    trans_results = await orch.make_action(transcoding_actions)
+    trans_results = await orch.make_action(transcoding_actions, retries=0)
     for res in trans_results:
         if not res['success']:
             raise Exception('Some transcoding Unsuccessful')
@@ -61,12 +48,8 @@ async def main():
     #store.remove_object({}, TRANSCODED_CHUNKS_NAME, chunks[0])
 
     print("** Combining **")
-    params = {
-        "type": "combine",
-        "input": chunks
-    }
-    combine_action = orch.prepare_action('combiner', params)
-    combine_results = (await orch.make_action([combine_action], object_ownership=False))[0]
+    combine_action = orch.prepare_action('combine', dict(input = chunks))
+    combine_results = (await orch.make_action([combine_action], object_ownership=False, retries=0))[0]
     if not combine_results['success']:
         raise Exception('Error combining transcoded chunks')
 
@@ -78,4 +61,7 @@ async def main():
     orch.stop()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-video", required=True)
+    args = parser.parse_args()
+    asyncio.run(main(args.input_video))
