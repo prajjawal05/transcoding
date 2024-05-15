@@ -1,17 +1,25 @@
 ## Setting Up
 
 Install prerequisites:
-apt install -y docker.io
+
+apt install -y docker.io python3-pip
+
 https://kind.sigs.k8s.io/docs/user/quick-start/
+
 https://helm.sh/docs/intro/install/
+
 https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/
+
 https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+
 https://github.com/apache/openwhisk-cli/releases
 
 ### Local Setup
 
 Start kind: `bash start-kind.sh`
+
 Start OpenWhisk: `bash start-cluster.sh`
+
 Configure wsk: `wsk property set --apihost 172.18.0.4:31001 --auth "23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP"`
 
 If you are using an existing action, following are the steps that will be required:
