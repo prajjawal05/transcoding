@@ -46,7 +46,7 @@ python3 -m pip install .
 Update and install config:
 ```
 mkdir -p /etc/orchestration
-cp config/host-config.ini /etc/orchestration/
+cp config/host-config.ini /etc/orchestration/config.ini
 ```
 
 ### Local Running
