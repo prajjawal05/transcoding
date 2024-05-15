@@ -16,25 +16,38 @@ https://github.com/apache/openwhisk-cli/releases
 
 ### Local Setup
 
-Start kind: `bash start-kind.sh`
+Start kind:
+```
+bash start-kind.sh
+```
 
-Start OpenWhisk: `bash start-cluster.sh`
+Start OpenWhisk:
 
-Configure wsk: `wsk property set --apihost 172.18.0.4:31001 --auth "23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP"`
+```
+bash start-cluster.sh
+```
 
-If you are using an existing action, following are the steps that will be required:
+Configure wsk:
+```
+wsk property set --apihost 172.18.0.4:31001 --auth "23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP"
+```
 
-1. Run `pip3 install -r requirements.txt`.
-2. Change the details for third party services like storage in `constants.py`.
-3. You would need minio object store running somewhere.
+Run MinIO and MongoDB:
+```
+kubectl apply -f deploy/minio.yaml -f deploy/mongo.yaml
+```
 
-- For running minio use: `minio server miniodata`
+Install Orchestrator:
+```
+pip3 install -r requirements.txt
+python3 -m pip install .
+```
 
-3. MongoDB is also required for storing action states.
-
-- For mongod use: `mongod --config /usr/local/etc/mongod.conf --fork` or `sudo systemctl daemon-reload && sudo systemctl start mongod`
-
-4. Go over to the respective action folder for any more details.
+Update and install config:
+```
+mkdir -p /etc/orchestration
+cp config/host-config.ini /etc/orchestration/
+```
 
 ### Local Running
 
