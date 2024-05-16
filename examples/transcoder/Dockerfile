@@ -1,4 +1,4 @@
-FROM alexmerenstein/orchaction:latest
+FROM alexmerenstein/orchaction:0.0.4
 
 RUN apk update && apk add ffmpeg
 

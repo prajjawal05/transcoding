@@ -2,7 +2,7 @@
 
 pushd "$(dirname "$0")"
 
-ACTION_TAG="${ACTION_TAG:-docker.io/alexmerenstein/transcode:latest}"
+ACTION_TAG="${ACTION_TAG:-docker.io/alexmerenstein/transcode:0.0.4}"
 
 docker build . -t ${ACTION_TAG}
 docker push ${ACTION_TAG}
